@@ -15,7 +15,6 @@
    | Author: Wez Furlong <wez@thebrainroom.com>                           |
    +----------------------------------------------------------------------+
  */
-/* $Id$ */
 
 #if 0 && (defined(__linux__) || defined(sun) || defined(__IRIX__))
 # define _BSD_SOURCE 		/* linux wants this when XOPEN mode is on */
@@ -104,7 +103,7 @@ static php_process_env_t _php_array_to_envp(zval *environment, int is_persistent
 		str = zval_get_string(element);
 
 		if (ZSTR_LEN(str) == 0) {
-			zend_string_release(str);
+			zend_string_release_ex(str, 0);
 			continue;
 		}
 
@@ -143,7 +142,7 @@ static php_process_env_t _php_array_to_envp(zval *environment, int is_persistent
 #endif
 			p += ZSTR_LEN(str) + 1;
 		}
-		zend_string_release(str);
+		zend_string_release_ex(str, 0);
 	} ZEND_HASH_FOREACH_END();
 
 	assert((uint32_t)(p - env.envp) <= sizeenv);
@@ -448,7 +447,7 @@ PHP_FUNCTION(proc_open)
 	ZEND_PARSE_PARAMETERS_START(3, 6)
 		Z_PARAM_STRING(command, command_len)
 		Z_PARAM_ARRAY(descriptorspec)
-		Z_PARAM_ZVAL_DEREF(pipes)
+		Z_PARAM_ZVAL(pipes)
 		Z_PARAM_OPTIONAL
 		Z_PARAM_STRING_EX(cwd, cwd_len, 1, 0)
 		Z_PARAM_ARRAY_EX(environment, 1, 0)
@@ -863,6 +862,11 @@ PHP_FUNCTION(proc_open)
 #endif
 	/* we forked/spawned and this is the parent */
 
+	pipes = zend_try_array_init(pipes);
+	if (!pipes) {
+		goto exit_fail;
+	}
+
 	proc = (struct php_process_handle*)pemalloc(sizeof(struct php_process_handle), is_persistent);
 	proc->is_persistent = is_persistent;
 	proc->command = command;
@@ -873,9 +877,6 @@ PHP_FUNCTION(proc_open)
 	proc->childHandle = childHandle;
 #endif
 	proc->env = env;
-
-	zval_ptr_dtor(pipes);
-	array_init(pipes);
 
 #if PHP_CAN_DO_PTS
 	if (dev_ptmx >= 0) {

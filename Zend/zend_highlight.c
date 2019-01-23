@@ -12,12 +12,10 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@zend.com so we can mail you a copy immediately.              |
    +----------------------------------------------------------------------+
-   | Authors: Andi Gutmans <andi@zend.com>                                |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   | Authors: Andi Gutmans <andi@php.net>                                 |
+   |          Zeev Suraski <zeev@php.net>                                 |
    +----------------------------------------------------------------------+
 */
-
-/* $Id$ */
 
 #include "zend.h"
 #include <zend_language_parser.h>
@@ -156,7 +154,7 @@ ZEND_API void zend_highlight(zend_syntax_highlighter_ini *syntax_highlighter_ini
 				case T_DOC_COMMENT:
 					break;
 				default:
-					zend_string_release(Z_STR(token));
+					zval_ptr_dtor_str(&token);
 					break;
 			}
 		}
@@ -219,7 +217,7 @@ ZEND_API void zend_strip(void)
 					break;
 
 				default:
-					zend_string_release(Z_STR(token));
+					zval_ptr_dtor_str(&token);
 					break;
 			}
 		}
@@ -240,4 +238,3 @@ ZEND_API void zend_strip(void)
  * vim600: sw=4 ts=4 fdm=marker
  * vim<600: sw=4 ts=4
  */
-

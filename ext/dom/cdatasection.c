@@ -17,8 +17,6 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -37,7 +35,7 @@ ZEND_END_ARG_INFO();
 /*
 * class DOMCdataSection extends DOMText
 *
-* URL: http://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-667469212
+* URL: https://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-667469212
 * Since:
 */
 
@@ -49,8 +47,6 @@ const zend_function_entry php_dom_cdatasection_class_functions[] = {
 /* {{{ proto DOMCdataSection::__construct(string value); */
 PHP_METHOD(domcdatasection, __construct)
 {
-
-	zval *id = getThis();
 	xmlNodePtr nodep = NULL, oldnode = NULL;
 	dom_object *intern;
 	char *value = NULL;
@@ -67,7 +63,7 @@ PHP_METHOD(domcdatasection, __construct)
 		RETURN_FALSE;
 	}
 
-	intern = Z_DOMOBJ_P(id);
+	intern = Z_DOMOBJ_P(ZEND_THIS);
 	oldnode = dom_object_get_node(intern);
 	if (oldnode != NULL) {
 		php_libxml_node_free_resource(oldnode );

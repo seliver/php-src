@@ -12,11 +12,9 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Author: Andi Gutmans <andi@zend.com>                                 |
+   | Author: Andi Gutmans <andi@php.net>                                  |
    +----------------------------------------------------------------------+
 */
-
-/* $Id$ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -474,7 +472,7 @@ PHP_FUNCTION(bcpow)
 /* }}} */
 
 /* {{{ proto string bcsqrt(string operand [, int scale])
-   Returns the square root of an arbitray precision number */
+   Returns the square root of an arbitrary precision number */
 PHP_FUNCTION(bcsqrt)
 {
 	zend_string *left;

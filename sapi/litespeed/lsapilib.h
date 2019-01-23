@@ -384,7 +384,7 @@ int LSAPI_is_suEXEC_Daemon(void);
 
 int LSAPI_Set_Restored_Parent_Pid(int pid);
 
-typedef void (*LSAPI_On_Timer_pf)(void);
+typedef void (*LSAPI_On_Timer_pf)(int *forked_child_pid);
 void LSAPI_Register_Pgrp_Timer_Callback(LSAPI_On_Timer_pf);
 
 int LSAPI_Inc_Req_Processed(int cnt);
@@ -402,6 +402,7 @@ int LSAPI_Inc_Req_Processed(int cnt);
 #define LSAPI_LOG_TIMESTAMP_BITS (0xff00)
 #define LSAPI_LOG_TIMESTAMP_FULL (0x100)
 #define LSAPI_LOG_TIMESTAMP_HMS  (0x200)
+#define LSAPI_LOG_TIMESTAMP_STDERR  (0x400)
 
 #define LSAPI_LOG_PID            (0x10000)
 
@@ -418,10 +419,3 @@ void LSAPI_Log(int flag, const char * fmt, ...)
 
 
 #endif
-
-
-
-
-
-
-

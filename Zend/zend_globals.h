@@ -12,12 +12,10 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@zend.com so we can mail you a copy immediately.              |
    +----------------------------------------------------------------------+
-   | Authors: Andi Gutmans <andi@zend.com>                                |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   | Authors: Andi Gutmans <andi@php.net>                                 |
+   |          Zeev Suraski <zeev@php.net>                                 |
    +----------------------------------------------------------------------+
 */
-
-/* $Id$ */
 
 #ifndef ZEND_GLOBALS_H
 #define ZEND_GLOBALS_H
@@ -58,10 +56,6 @@ END_EXTERN_C()
 
 /* excpt.h on Digital Unix 4.0 defines function_table */
 #undef function_table
-
-#define ZEND_EARLY_BINDING_COMPILE_TIME 0
-#define ZEND_EARLY_BINDING_DELAYED      1
-#define ZEND_EARLY_BINDING_DELAYED_ALL  2
 
 typedef struct _zend_vm_stack *zend_vm_stack;
 typedef struct _zend_ini_entry zend_ini_entry;
@@ -122,11 +116,12 @@ struct _zend_compiler_globals {
 	zend_arena *ast_arena;
 
 	zend_stack delayed_oplines_stack;
+	HashTable *memoized_exprs;
+	int memoize_mode;
 
-#ifdef ZTS
-	zval **static_members_table;
-	int last_static_member;
-#endif
+	void   *map_ptr_base;
+	size_t  map_ptr_size;
+	size_t  map_ptr_last;
 };
 
 
@@ -163,6 +158,10 @@ struct _zend_executor_globals {
 	zend_long precision;
 
 	int ticks_count;
+
+	uint32_t persistent_constants_count;
+	uint32_t persistent_functions_count;
+	uint32_t persistent_classes_count;
 
 	HashTable *in_autoload;
 	zend_function *autoload_func;
@@ -273,6 +272,9 @@ struct _zend_php_scanner_globals {
 	int yy_state;
 	zend_stack state_stack;
 	zend_ptr_stack heredoc_label_stack;
+	zend_bool heredoc_scan_ahead;
+	int heredoc_indentation;
+	zend_bool heredoc_indentation_uses_spaces;
 
 	/* original (unfiltered) script */
 	unsigned char *script_org;

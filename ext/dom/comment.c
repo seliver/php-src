@@ -17,8 +17,6 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -37,7 +35,7 @@ ZEND_END_ARG_INFO();
 /*
 * class DOMComment extends DOMCharacterData
 *
-* URL: http://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-1728279322
+* URL: https://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-1728279322
 * Since:
 */
 
@@ -49,8 +47,6 @@ const zend_function_entry php_dom_comment_class_functions[] = {
 /* {{{ proto DOMComment::__construct([string value]); */
 PHP_METHOD(domcomment, __construct)
 {
-
-	zval *id = getThis();
 	xmlNodePtr nodep = NULL, oldnode = NULL;
 	dom_object *intern;
 	char *value = NULL;
@@ -67,7 +63,7 @@ PHP_METHOD(domcomment, __construct)
 		RETURN_FALSE;
 	}
 
-	intern = Z_DOMOBJ_P(id);
+	intern = Z_DOMOBJ_P(ZEND_THIS);
 	if (intern != NULL) {
 		oldnode = dom_object_get_node(intern);
 		if (oldnode != NULL) {

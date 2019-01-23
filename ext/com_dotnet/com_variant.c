@@ -16,8 +16,6 @@
    +----------------------------------------------------------------------+
  */
 
-/* $Id$ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -492,7 +490,7 @@ PHP_FUNCTION(com_variant_create_instance)
 
 				werr = php_win32_error_to_msg(res);
 				spprintf(&msg, 0, "Variant type conversion failed: %s", werr);
-				LocalFree(werr);
+				php_win32_error_msg_free(werr);
 
 				php_com_throw_exception(res, msg);
 				efree(msg);
@@ -1011,13 +1009,13 @@ PHP_FUNCTION(variant_date_from_timestamp)
 	tzset();
 	ttstamp = timestamp;
 	tmv = localtime(&ttstamp);
-#if ZEND_ENABLE_ZVAL_LONG64
+
 	/* Invalid after 23:59:59, December 31, 3000, UTC */
 	if (!tmv) {
 		php_error_docref(NULL, E_WARNING, "Invalid timestamp " ZEND_LONG_FMT, timestamp);
 		RETURN_FALSE;
 	}
-#endif
+
 	memset(&systime, 0, sizeof(systime));
 
 	systime.wDay = tmv->tm_mday;
@@ -1080,7 +1078,7 @@ PHP_FUNCTION(variant_set_type)
 
 		werr = php_win32_error_to_msg(res);
 		spprintf(&msg, 0, "Variant type conversion failed: %s", werr);
-		LocalFree(werr);
+		php_win32_error_msg_free(werr);
 
 		php_com_throw_exception(res, msg);
 		efree(msg);
@@ -1114,7 +1112,7 @@ PHP_FUNCTION(variant_cast)
 
 		werr = php_win32_error_to_msg(res);
 		spprintf(&msg, 0, "Variant type conversion failed: %s", werr);
-		LocalFree(werr);
+		php_win32_error_msg_free(werr);
 
 		php_com_throw_exception(res, msg);
 		efree(msg);
@@ -1123,4 +1121,3 @@ PHP_FUNCTION(variant_cast)
 	VariantClear(&vres);
 }
 /* }}} */
-

@@ -17,8 +17,6 @@
    +----------------------------------------------------------------------+
  */
 
-/* $Id$ */
-
 /*
  *  This product includes software developed by the Apache Group
  *  for use in the Apache HTTP server project (http://www.apache.org/).
@@ -192,23 +190,19 @@ static void register_http_post_files_variable_ex(char *var, zval *val, zval *htt
 }
 /* }}} */
 
-static int unlink_filename(zval *el) /* {{{ */
-{
-	zend_string *filename = Z_STR_P(el);
-	VCWD_UNLINK(ZSTR_VAL(filename));
-	return 0;
-}
-/* }}} */
-
-
 static void free_filename(zval *el) {
 	zend_string *filename = Z_STR_P(el);
-	zend_string_release(filename);
+	zend_string_release_ex(filename, 0);
 }
 
 PHPAPI void destroy_uploaded_files_hash(void) /* {{{ */
 {
-	zend_hash_apply(SG(rfc1867_uploaded_files), unlink_filename);
+	zval *el;
+
+	ZEND_HASH_FOREACH_VAL(SG(rfc1867_uploaded_files), el) {
+		zend_string *filename = Z_STR_P(el);
+		VCWD_UNLINK(ZSTR_VAL(filename));
+	} ZEND_HASH_FOREACH_END();
 	zend_hash_destroy(SG(rfc1867_uploaded_files));
 	FREE_HASHTABLE(SG(rfc1867_uploaded_files));
 }
@@ -283,11 +277,7 @@ static int fill_buffer(multipart_buffer *self)
 /* eof if we are out of bytes, or if we hit the final boundary */
 static int multipart_buffer_eof(multipart_buffer *self)
 {
-	if ( (self->bytes_in_buffer == 0 && fill_buffer(self) < 1) ) {
-		return 1;
-	} else {
-		return 0;
-	}
+	return self->bytes_in_buffer == 0 && fill_buffer(self) < 1;
 }
 
 /* create new multipart_buffer structure */
@@ -394,7 +384,7 @@ static int find_boundary(multipart_buffer *self, char *boundary)
 {
 	char *line;
 
-	/* loop thru lines */
+	/* loop through lines */
 	while( (line = get_line(self)) )
 	{
 		/* finished if we found the boundary */
@@ -1113,7 +1103,7 @@ SAPI_API SAPI_POST_HANDLER_FUNC(rfc1867_post_handler) /* {{{ */
 					if (cancel_upload != UPLOAD_ERROR_E) { /* file creation failed */
 						unlink(ZSTR_VAL(temp_filename));
 					}
-					zend_string_release(temp_filename);
+					zend_string_release_ex(temp_filename, 0);
 				}
 				temp_filename = NULL;
 			} else {

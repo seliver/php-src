@@ -12,7 +12,7 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Author: Dmitry Stogov <dmitry@zend.com>                              |
+   | Author: Dmitry Stogov <dmitry@php.net>                               |
    +----------------------------------------------------------------------+
  */
 
@@ -114,7 +114,7 @@ ZEND_API void ZEND_FASTCALL smart_str_append_escaped(smart_str *str, const char 
 	}
 }
 
-ZEND_API void ZEND_FASTCALL smart_str_append_printf(smart_str *dest, const char *format, ...) {
+ZEND_API void smart_str_append_printf(smart_str *dest, const char *format, ...) {
 	va_list arg;
 	va_start(arg, format);
 	zend_printf_to_smart_str(dest, format, arg);

@@ -19,9 +19,6 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
-
 #include "zend.h"
 #include "zend_compile.h"
 #include "zend_stream.h"
@@ -189,7 +186,7 @@ ZEND_API int zend_stream_fixup(zend_file_handle *file_handle, char **buf, size_t
 				return FAILURE;
 			}
 			memset(&file_handle->handle.stream.mmap, 0, sizeof(zend_mmap));
-			file_handle->handle.stream.isatty     = isatty(fileno((FILE *)file_handle->handle.stream.handle)) ? 1 : 0;
+			file_handle->handle.stream.isatty     = isatty(fileno((FILE *)file_handle->handle.stream.handle));
 			file_handle->handle.stream.reader     = (zend_stream_reader_t)zend_stream_stdio_reader;
 			file_handle->handle.stream.closer     = (zend_stream_closer_t)zend_stream_stdio_closer;
 			file_handle->handle.stream.fsizer     = (zend_stream_fsizer_t)zend_stream_stdio_fsizer;
@@ -313,7 +310,7 @@ ZEND_API void zend_file_handle_dtor(zend_file_handle *fh) /* {{{ */
 			break;
 	}
 	if (fh->opened_path) {
-		zend_string_release(fh->opened_path);
+		zend_string_release_ex(fh->opened_path, 0);
 		fh->opened_path = NULL;
 	}
 	if (fh->free_filename && fh->filename) {

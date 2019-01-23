@@ -20,7 +20,7 @@
    | ZTS per process OCIPLogon by Harald Radi <harald.radi@nme.at>        |
    |                                                                      |
    | Redesigned by: Antony Dovgal <antony@zend.com>                       |
-   |                Andi Gutmans <andi@zend.com>                          |
+   |                Andi Gutmans <andi@php.net>                           |
    |                Wez Furlong <wez@omniti.com>                          |
    +----------------------------------------------------------------------+
 */
@@ -71,7 +71,7 @@ sb4 callback_fn(void *svchp, void *envhp, void *fo_ctx, ub4 fo_type, ub4 fo_even
 		returnValue = (sb4) Z_LVAL(retval);
 	}
 
-	/* Setting params[0] to null so ressource isn't destroyed on zval_dtor */
+	/* Setting params[0] to null so resource isn't destroyed on zval_dtor */
 	ZVAL_NULL(&params[0]);
 
 	/* Cleanup */

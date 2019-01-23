@@ -13,7 +13,7 @@
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
    | Authors: Rasmus Lerdorf <rasmus@php.net>                             |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   |          Zeev Suraski <zeev@php.net>                                 |
    |          Pedro Melo <melo@ip.pt>                                     |
    |          Sterling Hughes <sterling@php.net>                          |
    |                                                                      |
@@ -23,7 +23,6 @@
    |                     Shawn Cokus <Cokus@math.washington.edu>          |
    +----------------------------------------------------------------------+
  */
-/* $Id$ */
 
 #include "php.h"
 #include "php_rand.h"
@@ -368,4 +367,3 @@ PHP_MINIT_FUNCTION(mt_rand)
  * vim600: noet sw=4 ts=4 fdm=marker
  * vim<600: noet sw=4 ts=4
  */
-

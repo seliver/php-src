@@ -17,8 +17,6 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -42,7 +40,7 @@ ZEND_END_ARG_INFO();
 /*
 * class DOMNodeList
 *
-* URL: http://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-536297177
+* URL: https://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-536297177
 * Since:
 */
 
@@ -111,7 +109,8 @@ PHP_FUNCTION(dom_nodelist_count)
 	zval *id;
 	dom_object *intern;
 
-	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "O", &id, dom_nodelist_class_entry) == FAILURE) {
+	id = ZEND_THIS;
+	if (zend_parse_parameters_none() == FAILURE) {
 		return;
 	}
 
@@ -140,7 +139,8 @@ PHP_FUNCTION(dom_nodelist_item)
 	xmlNodePtr nodep, curnode;
 	int count = 0;
 
-	if (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), "Ol", &id, dom_nodelist_class_entry, &index) == FAILURE) {
+	id = ZEND_THIS;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &index) == FAILURE) {
 		return;
 	}
 

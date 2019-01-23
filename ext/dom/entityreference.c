@@ -17,8 +17,6 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -36,7 +34,7 @@ ZEND_END_ARG_INFO();
 /*
 * class DOMEntityReference extends DOMNode
 *
-* URL: http://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-11C98490
+* URL: https://www.w3.org/TR/2003/WD-DOM-Level-3-Core-20030226/DOM3-Core.html#ID-11C98490
 * Since:
 */
 
@@ -48,7 +46,6 @@ const zend_function_entry php_dom_entityreference_class_functions[] = {
 /* {{{ proto DOMEntityReference::__construct(string name) */
 PHP_METHOD(domentityreference, __construct)
 {
-	zval *id = getThis();
 	xmlNode *node;
 	xmlNodePtr oldnode = NULL;
 	dom_object *intern;
@@ -72,7 +69,7 @@ PHP_METHOD(domentityreference, __construct)
 		RETURN_FALSE;
 	}
 
-	intern = Z_DOMOBJ_P(id);
+	intern = Z_DOMOBJ_P(ZEND_THIS);
 	if (intern != NULL) {
 		oldnode = dom_object_get_node(intern);
 		if (oldnode != NULL) {

@@ -1,4 +1,4 @@
-PHP 7.3 UPGRADE NOTES
+PHP 7.4 UPGRADE NOTES
 
 1. Backward Incompatible Changes
 2. New Features
@@ -12,62 +12,114 @@ PHP 7.3 UPGRADE NOTES
 10. New Global Constants
 11. Changes to INI File Handling
 12. Windows Support
-13. Other Changes
+12. Migration to pkg-config
+14. Other Changes
+15. Performance Improvements
 
 
 ========================================
 1. Backward Incompatible Changes
 ========================================
 
-Core:
-  . The ext_skel utility has been completely redesigned with new options and 
-    some old options removed. This is now written in PHP and has no external 
-	dependencies.
-  . Support for BeOS has been dropped.
-  . Exceptions thrown due to automatic conversion of warnings into exceptions
-    in EH_THROW mode (e.g. some DateTime exceptions) no longer populate
-    error_get_last() state. As such, they now work the same way as manually
-    thrown exceptions.
+- Core:
+  . Referencing parent:: inside a class that does not have a parent will now
+    generate a compile-time error. Previously the error was only emitted at
+    run-time.
 
-BCMath:
-  . All warnings thrown by BCMath functions are now using PHP's error handling.
-    Formerly some warnings have directly been written to stderr.
-  . bcmul() and bcpow() now return numbers with the requested scale. Formerly,
-    the returned numbers may have omitted trailing decimal zeroes.
+- Curl:
+  . Attempting to serialize a CURLFile class will now generate an exception.
+    Previously the exception was only thrown on unserialization.
 
-SPL:
-  . If an SPL autoloader throws an exception, following autoloaders will not be
-    executed. Previously all autoloaders were executed and exceptions were
-    chained.
+- Date:
+  . Calling var_dump() or similar on a DateTime(Immutable) instance will no
+    longer leave behind accessible properties on the object.
 
-SimpleXML:
-  . Mathematic operations involving SimpleXML objects will now treat the text as
-    an integer or float, whichever is more appropriate. Previously values were
-    treated as integers unconditionally.
+- Intl:
+  . The default parameter value of idn_to_ascii() and idn_to_utf8() is now
+    INTL_IDNA_VARIANT_UTS46 instead of the deprecated INTL_IDNA_VARIANT_2003.
 
-Standard:
-  . getimagesize() and related functions now report the mime type of BMP images
-	  as image/bmp instead of image/x-ms-bmp, since the former has been registered
-		with the IANA (see RFC 7903).
+- Openssl:
+  . The openssl_random_pseudo_bytes() function will now throw an exception in
+    error situations, similar to random_bytes(). In particular, an Error is
+    thrown if the number of requested bytes is smaller *or equal* than zero,
+    and an Exception is thrown is sufficient randomness cannot be gathered.
+    The $crypto_strong output argument is guaranteed to always be true if the
+    function does not throw, so explicitly checking it is not necessary.
+    RFC: http://php.net/manual/de/function.openssl-random-pseudo-bytes.php
+
+- PDO:
+  . Attempting to serialize a PDO or PDOStatement instance will now generate
+    an Exception rather than a PDOException, consistent with other internal
+    classes which do not support serialization.
+
+- Reflection:
+  . Reflection objects will now generate an exception if an attempt is made
+    to serialize them. Serialization for reflection objects was never
+    supported and resulted in corrupted reflection objects. It has been
+    explicitly prohibited now.
+
+- SPL:
+  . Calling get_object_vars() on an ArrayObject instance will now always return
+    the properties of the ArrayObject itself (or a subclass). Previously it
+    returned the values of the wrapped array/object unless the STD_PROP_LIST
+    flag was specified. Other affected operations are:
+
+     * ReflectionObject::getProperties()
+     * reset(), current(), etc. Use Iterator methods instead.
+     * Potentially others working on object properties as a list.
+
+    (array) casts are *not* affected. They will continue to return either the
+    wrapped array, or the ArrayObject properties, depending on whether the
+    STD_PROP_LIST flag is used.
+  . SplPriorityQueue::setExtractFlags() will throw an exception if zero is
+    passed. Previously this would generate a recoverable fatal error on the
+    next extraction operation.
+
+- Standard:
+  . The "o" serialization format has been removed. As it is never produced by
+    PHP, this may only break unserialization of manually crafted strings.
 
 ========================================
 2. New Features
 ========================================
 
-Core:
-  . Array destructuring now supports reference assignments using the syntax
-    [&$a, [$b, &$c]] = $d. The same is also supported for list().
-    (RFC: https://wiki.php.net/rfc/list_reference_assignment)
-  . instanceof now allows literals as the first operand,
-    in which case the result is always FALSE.
+- Core:
+  . Added support for typed properties. For example:
 
-BCMath:
-  . bcscale() can now also be used as getter to retrieve the current scale in use.
+        class User {
+            public int $id;
+            public string $name;
+        }
 
-readline:
-  . Support for the completion_append_character and completion_suppress_append
-    options has been added to readline_info(). These options are only available
-    if PHP is linked against libreadline (rather than libedit).
+    This will enforce that $user->id can only be assigned integer and
+    $user->name can only be assigned strings. For more information see the
+    RFC: https://wiki.php.net/rfc/typed_properties_v2
+  . Added support for coalesce assign (??=) operator. For example:
+
+        $array['key'] ??= computeDefault();
+        // is roughly equivalent to
+        if (!isset($array['key'])) {
+            $array['key'] = computeDefault();
+        }
+
+    RFC: https://wiki.php.net/rfc/null_coalesce_equal_operator
+
+- FFI:
+  . A new extension which provides a simple way to call native functions, access
+    native variables and create/access data structures defined in C libraries.
+    RFC: https://wiki.php.net/rfc/ffi
+
+- OPcache:
+  . Support for preloading code has been added.
+    RFC: https://wiki.php.net/rfc/preload
+
+- PDO_OCI:
+  . PDOStatement::getColumnMeta() is now available
+
+- PDO_SQLite:
+  . PDOStatement::getAttribute(PDO::SQLITE_ATTR_READONLY_STATEMENT) allows to
+    check whether this statement is read-only, i.e. whether it doesn't modify
+    the database.
 
 ========================================
 3. Changes in SAPI modules
@@ -77,78 +129,46 @@ readline:
 4. Deprecated Functionality
 ========================================
 
+- Core:
+  . Unbinding $this of a non-static method through a combination of
+    ReflectionMethod::getClosure() and closure rebinding is deprecated. Doing
+    so is equivalent to calling a non-static method statically, which has been
+    deprecated since PHP 7.0.
+
 ========================================
 5. Changed Functions
 ========================================
 
-JSON:
-  . A new flag has been added, JSON_THROW_ON_ERROR, which can be used with
-    json_decode() or json_encode() and causes these functions to throw a
-    JsonException upon an error, instead of setting the global error state that
-    is retrieved with json_last_error(). JSON_PARTIAL_OUTPUT_ON_ERROR takes
-    precedence over JSON_THROW_ON_ERROR.
-    (RFC: https://wiki.php.net/rfc/json_throw_on_error)
+- SPL:
+  . SplFileObject::fputcsv(), ::fgetcsv() and ::setCsvControl() now accept an
+    empty string as $escape argument, which disables the propriertary PHP
+    escaping mechanism. SplFileObject::getCsvControl() now may also return an
+    empty string for the third array element, accordingly.
 
-Standard:
-  . debug_zval_dump() was changed to display recursive arrays and objects
-    in the same way as var_dump(). Now, it doesn't display them twice.
-  . array_push() and array_unshift() can now also be called with a single
-    argument, which is particularly convenient wrt. the spread operator.
-
-PCRE:
-  . preg_quote() now also escapes the '#' character.
+- Standard:
+  . fputcsv() and fgetcsv() now accept an empty string as $escape argument,
+    which disables the propriertary PHP escaping mechanism. The behavior of
+    str_getcsv() has been adjusted accordingly (formerly, an empty string was
+    identical to using the default).
 
 ========================================
 6. New Functions
 ========================================
 
-Core:
-  . Added monotonic timer function hrtime([bool get_as_num]). It returns an
-    array of the form [seconds, nanoseconds] with the timestamp starting at
-    an unspecified point in the past. If the optional argument is passed as
-    true, the return value is an integer on 64-bit systems or float on
-    32-bit systems, representing the nanoseconds. The timestamp is not
-    adjustable and is not related to wall clock or time of day. The timers
-    are available under Linux, FreeBSD, Windows, Mac, SunOS, AIX and their
-    derivatives. If no required timers are provided by a corresponding
-    platform, the function returns false.
+- OpenSSL:
+  . Added openssl_x509_verify(mixed cert, mixed key) function that verifies the
+    signature of the certificate using a public key. A wrapper around the
+    OpenSSL's X509_verify() function.
+    See <https://github.com/php/php-src/pull/3624>.
 
-Date:
-  . Added the DateTime::createFromImmutable() method, which mirrors
-    DateTimeImmutable::createFromMutable().
-
-GMP:
-  . Added gmp_binomial(n, k) for calculating binomial coefficients.
-  . Added gmp_lcm(a, b) for calculating the least common multiple.
-  . Added gmp_perfect_power(a) to check if number is a perfect power.
-  . Added gmp_kronecker(a, b) to compute the Kronecker symbol.
-
-Intl:
-  . Added void Spoofchecker::setRestrictionLevel(int $level) method, available
-    when linked with ICU >= 58.1. Levels are represented as class constants
-    - Spoofchecker::ASCII
-    - Spoofchecker::HIGHLY_RESTRICTIVE
-    - Spoofchecker::MODERATELY_RESTRICTIVE
-    - Spoofchecker::MINIMALLY_RESTRICTIVE
-    - Spoofchecker::UNRESTRICTIVE
-    - Spoofchecker::SINGLE_SCRIPT_RESTRICTIVE
-    For the detailed documentation on the restriction levels, see
-    URestrictionLevel under
-    http://icu-project.org/apiref/icu4c/uspoof_8h.html
-  . Added Normalizer::getRawDecomposition() and normalizer_get_raw_decomposition(),
-    to retrieve the Decomposition_Mapping property of a character.
-
-Standard:
-  . Added is_countable() function, to check whether a value may be passed to
-    count().
-    (RFC: https://wiki.php.net/rfc/is-countable)
+- SQLite3:
+  . Added SQLite3Stmt::getSQL() to retrieve the SQL of the statement. If TRUE is
+    passed as parameter, query parameters will be replaced in the return value
+    by their currently bound value, if libsqlite ≥ 3.14 is used.
 
 ========================================
 7. New Classes and Interfaces
 ========================================
-
-JSON:
-  . JsonException
 
 ========================================
 8. Removed Extensions and SAPIs
@@ -158,68 +178,145 @@ JSON:
 9. Other Changes to Extensions
 ========================================
 
- Curl:
-  . libcurl >= 7.15.5 is now required.
+- GD:
+  . The behavior of imagecropauto() in the bundled libgd has been synced with
+    that of system libgd:
+     * IMG_CROP_DEFAULT is no longer falling back to IMG_CROP_SIDES
+     * Threshold-cropping now uses the algorithm of system libgd
+  . The default $mode parameter of imagecropauto() has been changed to
+    IMG_CROP_DEFAULT; passing -1 is now deprecated.
+  . imagescale() now supports aspect ratio preserving scaling to a fixed height
+    by passing -1 as $new_width.
 
- Filter:
-  . FILTER_VALIDATE_FLOAT now also supports a `thousand` option, which
-    defines the set of allowed thousand separator chars.  The default (`"',."`)
-    is fully backward compatible with former PHP versions.
+- Hash:
+  . The hash extension cannot be disabled anymore and is always an integral
+    part of any PHP build, similar to the date extension.
 
- FTP:
-  . Set default transfer mode to binary
+- Intl:
+  . The Intl extension now requires at least ICU 50.1.
 
- ODBC: 
-  . Support for ODBCRouter has been removed.
-  . Support for Birdstep has been removed.
+- Libxml:
+  . All libxml based extensions now require libxml 2.7.6 or newer.
 
- ZIP:
-  . Bundled libzip has been dropped,
-    system library is now required.
+- Reflection:
+  . Numeric value of class, property, function and constant modifiers was
+    changed. Don't filter methods and properties through
+    ReflectionClass::getMethods() and ReflectionClass::getProperties(), or test
+    results of Reflection...::getModifiers(), using hard-coded numeric values.
+    Use corresponding constants instead (e.g. ReflectionMethod::IS_PUBLIC).
+
+- SQLite3:
+  . The bundled libsqlite has been removed.  To build the SQLite3 extension
+    a system libsqlite3 ≥ 3.7.4 is now required. To build the PDO_SQLite
+    extension a system libsqlite3 ≥ 3.5.0 is now required.
+  . (Un)serialization of SQLite3, SQLite3Stmt and SQLite3Result is now explicitly
+    forbidden. Formerly, serialization of instances of these classes was
+    possible, but unserialization yielded unusable objects.
+  . The @param notation can now also be used to denote SQL query parameters.
+
+- Zip:
+  . The bundled libzip library has been removed. A system libzip >= 0.11 is now
+    necessary to build the extension.
 
 ========================================
 10. New Global Constants
 ========================================
 
-Curl:
-  . CURLOPT_REQUEST_TARGET
-
-JSON:
-  . JSON_THROW_ON_ERROR
-
-PGSQL:
-  . Requires Postgres 9.3
-    - PGSQL_DIAG_SCHEMA_NAME
-	- PGSQL_DIAG_TABLE_NAME
-	- PGSQL_DIAG_COLUMN_NAME
-	- PGSQL_DIAG_DATATYPE_NAME
-	- PGSQL_DIAG_CONSTRAINT_NAME
-  . Requires Postgres 9.6
-    - PGSQL_DIAG_SEVERITY_NONLOCALIZED
+- Tidy:
+  . TIDY_TAG_ARTICLE
+  . TIDY_TAG_ASIDE
+  . TIDY_TAG_AUDIO
+  . TIDY_TAG_BDI
+  . TIDY_TAG_CANVAS
+  . TIDY_TAG_COMMAND
+  . TIDY_TAG_DATALIST
+  . TIDY_TAG_DETAILS
+  . TIDY_TAG_DIALOG
+  . TIDY_TAG_FIGCAPTION
+  . TIDY_TAG_FIGURE
+  . TIDY_TAG_FOOTER
+  . TIDY_TAG_HEADER
+  . TIDY_TAG_HGROUP
+  . TIDY_TAG_MAIN
+  . TIDY_TAG_MARK
+  . TIDY_TAG_MENUITEM
+  . TIDY_TAG_METER
+  . TIDY_TAG_NAV
+  . TIDY_TAG_OUTPUT
+  . TIDY_TAG_PROGRESS
+  . TIDY_TAG_SECTION
+  . TIDY_TAG_SOURCE
+  . TIDY_TAG_SUMMARY
+  . TIDY_TAG_TEMPLATE
+  . TIDY_TAG_TIME
+  . TIDY_TAG_TRACK
+  . TIDY_TAG_VIDEO
 
 ========================================
 11. Changes to INI File Handling
 ========================================
 
-- birdstep.max_links
-  . This INI directive has been removed.
-
-- opcache.inherited_hack
-  . This INI directive has been removed. The value has already been ignored
-    since PHP 5.3.0.
-
 ========================================
 12. Windows Support
 ========================================
 
-- Core
-  . File descriptors are opened in shared read/write/delete mode by default.
-    This effectively maps the UNIX semantics and allows to delete files with
-    handles in use. It is not 100% same, some platform differences still
-    persist. After the deletion, the filename entry is blocked, until all
-    the opened handles to it are closed.
+- stat:
+  . The stat implementation has been refactored.
+    - An inode number is delivered and is based on the NTFS file index.
+    - The device number is now based on the volume serial number.
+
+  Note, that both values derived from the system and provided as is on 64-bit
+  systems. On 32-bit system, these values might overflow the 32-bit integer in
+  PHP, so they're a fake.
 
 ========================================
-13. Other Changes
+13. Migration to pkg-config
 ========================================
 
+A number of extensions have been migrated to exclusively use pkg-config for
+the detection of library dependencies. Generally, this means that instead of
+using --with-foo-dir=DIR or similar only --with-foo is used. Custom library
+paths can be specified either by adding additional directories to
+PKG_CONFIG_PATH or by explicitly specifying compilation options through
+FOO_CFLAGS and FOO_LIBS.
+
+The following extensions are affected:
+
+- Curl:
+  . --with-curl no longer accepts a directory.
+
+- Intl:
+  . --with-icu-dir has been removed. If --enable-intl is passed, then libicu is
+    always required.
+
+- OpenSSL:
+  . --with-openssl no longer accepts a directory.
+
+- PCRE:
+  . --with-pcre-regex has been removed. Instead --with-external-pcre is provided
+    to opt into using an external PCRE library, rather than the bundled one.
+
+- GD:
+  . --with-gd becomes --enable-gd (whether to enable the extension at all) and
+    --with-external-gd (to opt into using an external libgd, rather than the
+    bundled one).
+  . --with-png-dir has been removed. libpng is required.
+  . --with-zlib-dir has been removed. zlib is required.
+  . --with-freetype-dir becomes --with-freetype.
+  . --with-jpeg-dir becomes --with-jpeg.
+  . --with-webp-dir becomes --with-webp.
+  . --with-xpm-dir becomes --with-xpm.
+
+========================================
+14. Other Changes
+========================================
+
+========================================
+15. Performance Improvements
+========================================
+
+- Core:
+  . A specialized VM opcode for the array_key_exists() function has been added,
+    which improves performance of this function if it can be statically
+    resolved. In namespaced code, this may require writing \array_key_exists()
+    or explicitly importing the function.

@@ -16,8 +16,6 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -54,7 +52,7 @@ typedef struct _finfo_object {
 } finfo_object;
 
 #define FILEINFO_DECLARE_INIT_OBJECT(object) \
-	zval *object = ZEND_IS_METHOD_CALL() ? getThis() : NULL;
+	zval *object = getThis();
 
 static inline finfo_object *php_finfo_fetch_object(zend_object *obj) {
 	return (finfo_object *)((char*)(obj) - XtOffsetOf(finfo_object, zo));
@@ -217,7 +215,7 @@ PHP_MINIT_FUNCTION(finfo)
 	finfo_class_entry = zend_register_internal_class(&_finfo_class_entry);
 
 	/* copy the standard object handlers to you handler table */
-	memcpy(&finfo_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	memcpy(&finfo_object_handlers, &std_object_handlers, sizeof(zend_object_handlers));
 	finfo_object_handlers.offset = XtOffsetOf(finfo_object, zo);
 	finfo_object_handlers.free_obj = finfo_objects_free;
 
@@ -278,7 +276,6 @@ PHP_MINFO_FUNCTION(fileinfo)
 
 	php_info_print_table_start();
 	php_info_print_table_row(2, "fileinfo support", "enabled");
-	php_info_print_table_row(2, "version", PHP_FILEINFO_VERSION);
 	php_info_print_table_row(2, "libmagic", magic_ver);
 	php_info_print_table_end();
 }
@@ -607,7 +604,7 @@ PHP_FUNCTION(finfo_file)
 /* }}} */
 
 /* {{{ proto string finfo_buffer(resource finfo, char *string [, int options [, resource context]])
-   Return infromation about a string buffer. */
+   Return information about a string buffer. */
 PHP_FUNCTION(finfo_buffer)
 {
 	_php_finfo_get_type(INTERNAL_FUNCTION_PARAM_PASSTHRU, FILEINFO_MODE_BUFFER, 0);

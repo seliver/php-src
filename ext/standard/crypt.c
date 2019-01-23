@@ -13,13 +13,11 @@
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
    | Authors: Stig Bakken <ssb@php.net>                                   |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   |          Zeev Suraski <zeev@php.net>                                 |
    |          Rasmus Lerdorf <rasmus@php.net>                             |
    |          Pierre Joye <pierre@php.net>                                |
    +----------------------------------------------------------------------+
 */
-
-/* $Id$ */
 
 #include <stdlib.h>
 
@@ -39,16 +37,8 @@
 #  include <crypt.h>
 # endif
 #endif
-#if TM_IN_SYS_TIME
-#include <sys/time.h>
-#else
 #include <time.h>
-#endif
-#if HAVE_STRING_H
 #include <string.h>
-#else
-#include <strings.h>
-#endif
 
 #ifdef PHP_WIN32
 #include <process.h>

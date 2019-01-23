@@ -67,6 +67,7 @@ utf32be_is_mbc_newline(const UChar* p, const UChar* end)
 static OnigCodePoint
 utf32be_mbc_to_code(const UChar* p, const UChar* end ARG_UNUSED)
 {
+  if (end - p < 4) return 0;
   return (OnigCodePoint )(((p[0] * 256 + p[1]) * 256 + p[2]) * 256 + p[3]);
 }
 
@@ -190,5 +191,7 @@ OnigEncodingType OnigEncodingUTF32_BE = {
   onigenc_always_false_is_allowed_reverse_match,
   NULL, /* init */
   NULL, /* is_initialized */
-  is_valid_mbc_string
+  is_valid_mbc_string,
+  ENC_FLAG_UNICODE,
+  0, 0
 };

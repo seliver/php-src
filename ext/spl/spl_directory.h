@@ -16,8 +16,6 @@
    +----------------------------------------------------------------------+
  */
 
-/* $Id$ */
-
 #ifndef SPL_DIRECTORY_H
 #define SPL_DIRECTORY_H
 
@@ -98,7 +96,7 @@ struct _spl_filesystem_object {
 			zend_function      *func_getCurr;
 			char               delimiter;
 			char               enclosure;
-			char               escape;
+			int                escape;
 		} file;
 	} u;
 	zend_object        std;

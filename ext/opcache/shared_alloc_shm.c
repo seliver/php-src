@@ -12,10 +12,10 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Authors: Andi Gutmans <andi@zend.com>                                |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   | Authors: Andi Gutmans <andi@php.net>                                 |
+   |          Zeev Suraski <zeev@php.net>                                 |
    |          Stanislav Malyshev <stas@zend.com>                          |
-   |          Dmitry Stogov <dmitry@zend.com>                             |
+   |          Dmitry Stogov <dmitry@php.net>                              |
    +----------------------------------------------------------------------+
 */
 
@@ -29,7 +29,6 @@
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <sys/ipc.h>
-#include <dirent.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -12,12 +12,10 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Authors: Andi Gutmans <andi@zend.com>                                |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   | Authors: Andi Gutmans <andi@php.net>                                 |
+   |          Zeev Suraski <zeev@php.net>                                 |
    +----------------------------------------------------------------------+
  */
-
-/* $Id$ */
 
 #include "php.h"
 #include "php_streams.h"
@@ -77,11 +75,7 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 # include <unistd.h>
 #endif
 
-#if HAVE_STRING_H
-# include <string.h>
-#else
-# include <strings.h>
-#endif
+#include <string.h>
 
 #if HAVE_LOCALE_H
 # include <locale.h>
@@ -392,22 +386,22 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_array_slice, 0, 0, 2)
 	ZEND_ARG_INFO(0, preserve_keys)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_array_merge, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_array_merge, 0, 0, 1)
 	ZEND_ARG_INFO(0, arr1) /* ARRAY_INFO(0, arg, 0) */
 	ZEND_ARG_VARIADIC_INFO(0, arrays)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_array_merge_recursive, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_array_merge_recursive, 0, 0, 1)
 	ZEND_ARG_INFO(0, arr1) /* ARRAY_INFO(0, arg, 0) */
 	ZEND_ARG_VARIADIC_INFO(0, arrays)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_array_replace, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_array_replace, 0, 0, 1)
 	ZEND_ARG_INFO(0, arr1) /* ARRAY_INFO(0, arg, 0) */
 	ZEND_ARG_VARIADIC_INFO(0, arrays)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_array_replace_recursive, 0, 0, 2)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_array_replace_recursive, 0, 0, 1)
 	ZEND_ARG_INFO(0, arr1) /* ARRAY_INFO(0, arg, 0) */
 	ZEND_ARG_VARIADIC_INFO(0, arrays)
 ZEND_END_ARG_INFO()
@@ -417,6 +411,15 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_array_keys, 0, 0, 1)
 	ZEND_ARG_INFO(0, search_value)
 	ZEND_ARG_INFO(0, strict)
 ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO(arginfo_array_key_first, 0)
+	ZEND_ARG_INFO(0, arg) /* ARRAY_INFO(0, arg, 0) */
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO(arginfo_array_key_last, 0)
+	ZEND_ARG_INFO(0, arg) /* ARRAY_INFO(0, arg, 0) */
+ZEND_END_ARG_INFO()
+
 
 ZEND_BEGIN_ARG_INFO(arginfo_array_values, 0)
 	ZEND_ARG_INFO(0, arg) /* ARRAY_INFO(0, arg, 0) */
@@ -1424,7 +1427,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_setcookie, 0, 0, 1)
 	ZEND_ARG_INFO(0, name)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expires)
+	ZEND_ARG_INFO(0, expires_or_options)
 	ZEND_ARG_INFO(0, path)
 	ZEND_ARG_INFO(0, domain)
 	ZEND_ARG_INFO(0, secure)
@@ -1434,7 +1437,7 @@ ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_setrawcookie, 0, 0, 1)
 	ZEND_ARG_INFO(0, name)
 	ZEND_ARG_INFO(0, value)
-	ZEND_ARG_INFO(0, expires)
+	ZEND_ARG_INFO(0, expires_or_options)
 	ZEND_ARG_INFO(0, path)
 	ZEND_ARG_INFO(0, domain)
 	ZEND_ARG_INFO(0, secure)
@@ -1857,6 +1860,8 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_password_verify, 0, 0, 2)
 	ZEND_ARG_INFO(0, password)
 	ZEND_ARG_INFO(0, hash)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO(arginfo_password_algos, 0)
+ZEND_END_ARG_INFO();
 /* }}} */
 /* {{{ proc_open.c */
 #ifdef PHP_CAN_SUPPORT_PROC_OPEN
@@ -2923,6 +2928,7 @@ static const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(password_get_info,												arginfo_password_get_info)
 	PHP_FE(password_needs_rehash,											arginfo_password_needs_rehash)
 	PHP_FE(password_verify,													arginfo_password_verify)
+	PHP_FE(password_algos,													arginfo_password_algos)
 	PHP_FE(convert_uuencode,												arginfo_convert_uuencode)
 	PHP_FE(convert_uudecode,												arginfo_convert_uudecode)
 
@@ -3128,7 +3134,7 @@ static const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(feof,															arginfo_feof)
 	PHP_FE(fgetc,															arginfo_fgetc)
 	PHP_FE(fgets,															arginfo_fgets)
-	PHP_FE(fgetss,															arginfo_fgetss)
+	PHP_DEP_FE(fgetss,														arginfo_fgetss)
 	PHP_FE(fread,															arginfo_fread)
 	PHP_NAMED_FE(fopen,				php_if_fopen,							arginfo_fopen)
 	PHP_FE(fpassthru,														arginfo_fpassthru)
@@ -3362,6 +3368,8 @@ static const zend_function_entry basic_functions[] = { /* {{{ */
 	PHP_FE(array_replace,													arginfo_array_replace)
 	PHP_FE(array_replace_recursive,											arginfo_array_replace_recursive)
 	PHP_FE(array_keys,														arginfo_array_keys)
+	PHP_FE(array_key_first,													arginfo_array_key_first)
+	PHP_FE(array_key_last,													arginfo_array_key_last)
 	PHP_FE(array_values,													arginfo_array_values)
 	PHP_FE(array_count_values,												arginfo_array_count_values)
 	PHP_FE(array_column,													arginfo_array_column)
@@ -3774,6 +3782,7 @@ PHP_MSHUTDOWN_FUNCTION(basic) /* {{{ */
 #endif
 	BASIC_MSHUTDOWN_SUBMODULE(crypt)
 	BASIC_MSHUTDOWN_SUBMODULE(random)
+	BASIC_MSHUTDOWN_SUBMODULE(password)
 
 	zend_hash_destroy(&basic_submodules);
 	return SUCCESS;
@@ -3848,7 +3857,7 @@ PHP_RSHUTDOWN_FUNCTION(basic) /* {{{ */
 		setlocale(LC_CTYPE, "");
 		zend_update_current_locale();
 		if (BG(locale_string)) {
-			zend_string_release(BG(locale_string));
+			zend_string_release_ex(BG(locale_string), 0);
 			BG(locale_string) = NULL;
 		}
 	}
@@ -3944,12 +3953,10 @@ PHP_NAMED_FUNCTION(zif_inet_ntop)
 	} else
 #endif
 	if (address_len != 4) {
-		php_error_docref(NULL, E_WARNING, "Invalid in_addr value");
 		RETURN_FALSE;
 	}
 
 	if (!inet_ntop(af, address, buffer, sizeof(buffer))) {
-		php_error_docref(NULL, E_WARNING, "An unknown error occurred");
 		RETURN_FALSE;
 	}
 
@@ -3980,14 +3987,12 @@ PHP_NAMED_FUNCTION(php_inet_pton)
 	} else
 #endif
 	if (!strchr(address, '.')) {
-		php_error_docref(NULL, E_WARNING, "Unrecognized address %s", address);
 		RETURN_FALSE;
 	}
 
 	ret = inet_pton(af, address, buffer);
 
 	if (ret <= 0) {
-		php_error_docref(NULL, E_WARNING, "Unrecognized address %s", address);
 		RETURN_FALSE;
 	}
 
@@ -4336,7 +4341,7 @@ static int parse_opts(char * opts, opt_struct ** result)
 			(*opts >= 97 && *opts <= 122)   /* a - z */
 	) {
 		paras->opt_char = *opts;
-		paras->need_param = (*(++opts) == ':') ? 1 : 0;
+		paras->need_param = *(++opts) == ':';
 		paras->opt_name = NULL;
 		if (paras->need_param == 1) {
 			opts++;
@@ -4371,13 +4376,12 @@ PHP_FUNCTION(getopt)
 		Z_PARAM_STRING(options, options_len)
 		Z_PARAM_OPTIONAL
 		Z_PARAM_ARRAY(p_longopts)
-		Z_PARAM_ZVAL_DEREF(zoptind)
+		Z_PARAM_ZVAL(zoptind)
 	ZEND_PARSE_PARAMETERS_END_EX(RETURN_FALSE);
 
 	/* Init zoptind to 1 */
 	if (zoptind) {
-		zval_ptr_dtor(zoptind);
-		ZVAL_LONG(zoptind, 1);
+		ZEND_TRY_ASSIGN_LONG(zoptind, 1);
 	}
 
 	/* Get argv from the global symbol table. We calculate argc ourselves
@@ -4525,7 +4529,7 @@ PHP_FUNCTION(getopt)
 
 	/* Set zoptind to php_optind */
 	if (zoptind) {
-		ZVAL_LONG(zoptind, php_optind);
+		ZEND_TRY_ASSIGN_LONG(zoptind, php_optind);
 	}
 
 	free_longopts(orig_opts);
@@ -4683,25 +4687,41 @@ PHP_FUNCTION(get_current_user)
 }
 /* }}} */
 
-/* {{{ add_config_entry_cb
+/* {{{ add_config_entry
  */
-static int add_config_entry_cb(zval *entry, int num_args, va_list args, zend_hash_key *hash_key)
+static void add_config_entry(zend_ulong h, zend_string *key, zval *entry, zval *retval)
 {
-	zval *retval = (zval *)va_arg(args, zval*);
-	zval tmp;
-
 	if (Z_TYPE_P(entry) == IS_STRING) {
-		if (hash_key->key) {
-			add_assoc_str_ex(retval, ZSTR_VAL(hash_key->key), ZSTR_LEN(hash_key->key), zend_string_copy(Z_STR_P(entry)));
+		if (key) {
+			add_assoc_str_ex(retval, ZSTR_VAL(key), ZSTR_LEN(key), zend_string_copy(Z_STR_P(entry)));
 		} else {
-			add_index_str(retval, hash_key->h, zend_string_copy(Z_STR_P(entry)));
+			add_index_str(retval, h, zend_string_copy(Z_STR_P(entry)));
 		}
 	} else if (Z_TYPE_P(entry) == IS_ARRAY) {
+		zend_ulong h;
+		zend_string *key;
+		zval *zv, tmp;
+
 		array_init(&tmp);
-		zend_hash_apply_with_arguments(Z_ARRVAL_P(entry), add_config_entry_cb, 1, tmp);
-		zend_hash_update(Z_ARRVAL_P(retval), hash_key->key, &tmp);
+		ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(entry), h, key, zv)
+			add_config_entry(h, key, zv, &tmp);
+		ZEND_HASH_FOREACH_END();
+		zend_hash_update(Z_ARRVAL_P(retval), key, &tmp);
 	}
-	return 0;
+}
+/* }}} */
+
+/* {{{ add_config_entries
+ */
+static void add_config_entries(HashTable *hash, zval *return_value) /* {{{ */
+{
+	zend_ulong h;
+	zend_string *key;
+	zval *zv;
+
+	ZEND_HASH_FOREACH_KEY_VAL(hash, h, key, zv)
+		add_config_entry(h, key, zv, return_value);
+	ZEND_HASH_FOREACH_END();
 }
 /* }}} */
 
@@ -4722,7 +4742,7 @@ PHP_FUNCTION(get_cfg_var)
 	if (retval) {
 		if (Z_TYPE_P(retval) == IS_ARRAY) {
 			array_init(return_value);
-			zend_hash_apply_with_arguments(Z_ARRVAL_P(retval), add_config_entry_cb, 1, return_value);
+			add_config_entries(Z_ARRVAL_P(retval), return_value);
 			return;
 		} else {
 			RETURN_STRING(Z_STRVAL_P(retval));
@@ -5048,7 +5068,7 @@ static int user_shutdown_function_call(zval *zv) /* {{{ */
 		zend_string *function_name
 			= zend_get_callable_name(&shutdown_function_entry->arguments[0]);
 		php_error(E_WARNING, "(Registered shutdown functions) Unable to call %s() - function does not exist", ZSTR_VAL(function_name));
-		zend_string_release(function_name);
+		zend_string_release_ex(function_name, 0);
 		return 0;
 	}
 
@@ -5058,7 +5078,7 @@ static int user_shutdown_function_call(zval *zv) /* {{{ */
 				shutdown_function_entry->arg_count - 1,
 				shutdown_function_entry->arguments + 1) == SUCCESS)
 	{
-		zval_dtor(&retval);
+		zval_ptr_dtor(&retval);
 	}
 	return 0;
 }
@@ -5079,7 +5099,7 @@ static void user_tick_function_call(user_tick_function_entry *tick_fe) /* {{{ */
 								tick_fe->arg_count - 1,
 								tick_fe->arguments + 1
 								) == SUCCESS) {
-			zval_dtor(&retval);
+			zval_ptr_dtor(&retval);
 
 		} else {
 			zval *obj, *method;
@@ -5184,7 +5204,7 @@ PHP_FUNCTION(register_shutdown_function)
 			= zend_get_callable_name(&shutdown_function_entry.arguments[0]);
 		php_error_docref(NULL, E_WARNING, "Invalid shutdown callback '%s' passed", ZSTR_VAL(callback_name));
 		efree(shutdown_function_entry.arguments);
-		zend_string_release(callback_name);
+		zend_string_release_ex(callback_name, 0);
 		RETVAL_FALSE;
 	} else {
 		if (!BG(user_shutdown_function_names)) {
@@ -5207,7 +5227,8 @@ PHPAPI zend_bool register_user_shutdown_function(char *function_name, size_t fun
 		zend_hash_init(BG(user_shutdown_function_names), 0, NULL, user_shutdown_function_dtor, 0);
 	}
 
-	return zend_hash_str_update_mem(BG(user_shutdown_function_names), function_name, function_len, shutdown_function_entry, sizeof(php_shutdown_function_entry)) != NULL;
+	zend_hash_str_update_mem(BG(user_shutdown_function_names), function_name, function_len, shutdown_function_entry, sizeof(php_shutdown_function_entry));
+	return 1;
 }
 /* }}} */
 
@@ -5401,64 +5422,17 @@ PHP_FUNCTION(ini_get)
 }
 /* }}} */
 
-static int php_ini_get_option(zval *zv, int num_args, va_list args, zend_hash_key *hash_key) /* {{{ */
-{
-	zend_ini_entry *ini_entry = Z_PTR_P(zv);
-	zval *ini_array = va_arg(args, zval *);
-	int module_number = va_arg(args, int);
-	int details = va_arg(args, int);
-	zval option;
-
-	if (module_number != 0 && ini_entry->module_number != module_number) {
-		return 0;
-	}
-
-	if (hash_key->key == NULL ||
-		ZSTR_VAL(hash_key->key)[0] != 0
-	) {
-		if (details) {
-			array_init(&option);
-
-			if (ini_entry->orig_value) {
-				add_assoc_str(&option, "global_value", zend_string_copy(ini_entry->orig_value));
-			} else if (ini_entry->value) {
-				add_assoc_str(&option, "global_value", zend_string_copy(ini_entry->value));
-			} else {
-				add_assoc_null(&option, "global_value");
-			}
-
-			if (ini_entry->value) {
-				add_assoc_str(&option, "local_value", zend_string_copy(ini_entry->value));
-			} else {
-				add_assoc_null(&option, "local_value");
-			}
-
-			add_assoc_long(&option, "access", ini_entry->modifiable);
-
-			zend_symtable_update(Z_ARRVAL_P(ini_array), ini_entry->name, &option);
-		} else {
-			if (ini_entry->value) {
-				zval zv;
-
-				ZVAL_STR_COPY(&zv, ini_entry->value);
-				zend_symtable_update(Z_ARRVAL_P(ini_array), ini_entry->name, &zv);
-			} else {
-				zend_symtable_update(Z_ARRVAL_P(ini_array), ini_entry->name, &EG(uninitialized_zval));
-			}
-		}
-	}
-	return 0;
-}
-/* }}} */
-
 /* {{{ proto array ini_get_all([string extension[, bool details = true]])
    Get all configuration options */
 PHP_FUNCTION(ini_get_all)
 {
 	char *extname = NULL;
-	size_t extname_len = 0, extnumber = 0;
+	size_t extname_len = 0, module_number = 0;
 	zend_module_entry *module;
 	zend_bool details = 1;
+	zend_string *key;
+	zend_ini_entry *ini_entry;
+
 
 	ZEND_PARSE_PARAMETERS_START(0, 2)
 		Z_PARAM_OPTIONAL
@@ -5473,11 +5447,50 @@ PHP_FUNCTION(ini_get_all)
 			php_error_docref(NULL, E_WARNING, "Unable to find extension '%s'", extname);
 			RETURN_FALSE;
 		}
-		extnumber = module->module_number;
+		module_number = module->module_number;
 	}
 
 	array_init(return_value);
-	zend_hash_apply_with_arguments(EG(ini_directives), php_ini_get_option, 2, return_value, extnumber, details);
+	ZEND_HASH_FOREACH_STR_KEY_PTR(EG(ini_directives), key, ini_entry) {
+		zval option;
+
+		if (module_number != 0 && ini_entry->module_number != module_number) {
+			continue;
+		}
+
+		if (key == NULL || ZSTR_VAL(key)[0] != 0) {
+			if (details) {
+				array_init(&option);
+
+				if (ini_entry->orig_value) {
+					add_assoc_str(&option, "global_value", zend_string_copy(ini_entry->orig_value));
+				} else if (ini_entry->value) {
+					add_assoc_str(&option, "global_value", zend_string_copy(ini_entry->value));
+				} else {
+					add_assoc_null(&option, "global_value");
+				}
+
+				if (ini_entry->value) {
+					add_assoc_str(&option, "local_value", zend_string_copy(ini_entry->value));
+				} else {
+					add_assoc_null(&option, "local_value");
+				}
+
+				add_assoc_long(&option, "access", ini_entry->modifiable);
+
+				zend_symtable_update(Z_ARRVAL_P(return_value), ini_entry->name, &option);
+			} else {
+				if (ini_entry->value) {
+					zval zv;
+
+					ZVAL_STR_COPY(&zv, ini_entry->value);
+					zend_symtable_update(Z_ARRVAL_P(return_value), ini_entry->name, &zv);
+				} else {
+					zend_symtable_update(Z_ARRVAL_P(return_value), ini_entry->name, &EG(uninitialized_zval));
+				}
+			}
+		}
+	} ZEND_HASH_FOREACH_END();
 }
 /* }}} */
 
@@ -5533,7 +5546,7 @@ PHP_FUNCTION(ini_set)
 			_CHECK_PATH(ZSTR_VAL(varname), ZSTR_LEN(varname), "java.library.path") ||
 			_CHECK_PATH(ZSTR_VAL(varname), ZSTR_LEN(varname), "vpopmail.directory")) {
 			if (php_check_open_basedir(ZSTR_VAL(new_value))) {
-				zval_dtor(return_value);
+				zval_ptr_dtor_str(return_value);
 				RETURN_FALSE;
 			}
 		}
@@ -5541,7 +5554,7 @@ PHP_FUNCTION(ini_set)
 #undef _CHECK_PATH
 
 	if (zend_alter_ini_entry_ex(varname, new_value, PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0) == FAILURE) {
-		zval_dtor(return_value);
+		zval_ptr_dtor_str(return_value);
 		RETURN_FALSE;
 	}
 }
@@ -5583,11 +5596,11 @@ PHP_FUNCTION(set_include_path)
 
 	key = zend_string_init("include_path", sizeof("include_path") - 1, 0);
 	if (zend_alter_ini_entry_ex(key, new_value, PHP_INI_USER, PHP_INI_STAGE_RUNTIME, 0) == FAILURE) {
-		zend_string_release(key);
-		zval_dtor(return_value);
+		zend_string_release_ex(key, 0);
+		zval_ptr_dtor_str(return_value);
 		RETURN_FALSE;
 	}
-	zend_string_release(key);
+	zend_string_release_ex(key, 0);
 }
 /* }}} */
 
@@ -5622,7 +5635,7 @@ PHP_FUNCTION(restore_include_path)
 	}
 	key = zend_string_init("include_path", sizeof("include_path")-1, 0);
 	zend_restore_ini_entry(key, PHP_INI_STAGE_RUNTIME);
-	zend_string_free(key);
+	zend_string_efree(key);
 }
 /* }}} */
 
@@ -5681,7 +5694,7 @@ PHP_FUNCTION(ignore_user_abort)
 	if (ZEND_NUM_ARGS()) {
 		zend_string *key = zend_string_init("ignore_user_abort", sizeof("ignore_user_abort") - 1, 0);
 		zend_alter_ini_entry_chars(key, arg ? "1" : "0", 1, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);
-		zend_string_release(key);
+		zend_string_release_ex(key, 0);
 	}
 
 	RETURN_LONG(old_setting);
@@ -5829,10 +5842,10 @@ PHP_FUNCTION(register_tick_function)
 	if (!zend_is_callable(&tick_fe.arguments[0], 0, &function_name)) {
 		efree(tick_fe.arguments);
 		php_error_docref(NULL, E_WARNING, "Invalid tick callback '%s' passed", ZSTR_VAL(function_name));
-		zend_string_release(function_name);
+		zend_string_release_ex(function_name, 0);
 		RETURN_FALSE;
 	} else if (function_name) {
-		zend_string_release(function_name);
+		zend_string_release_ex(function_name, 0);
 	}
 
 	if (Z_TYPE(tick_fe.arguments[0]) != IS_ARRAY && Z_TYPE(tick_fe.arguments[0]) != IS_OBJECT) {
@@ -6001,7 +6014,7 @@ static void php_simple_ini_parser_cb(zval *arg1, zval *arg2, zval *arg3, int cal
 			}
 
 			if (Z_TYPE_P(find_hash) != IS_ARRAY) {
-				zval_dtor(find_hash);
+				zval_ptr_dtor_nogc(find_hash);
 				array_init(find_hash);
 			}
 
@@ -6079,7 +6092,7 @@ PHP_FUNCTION(parse_ini_file)
 
 	array_init(return_value);
 	if (zend_parse_ini_file(&fh, 0, (int)scanner_mode, ini_parser_cb, return_value) == FAILURE) {
-		zval_dtor(return_value);
+		zend_array_destroy(Z_ARR_P(return_value));
 		RETURN_FALSE;
 	}
 }
@@ -6121,7 +6134,7 @@ PHP_FUNCTION(parse_ini_string)
 
 	array_init(return_value);
 	if (zend_parse_ini_string(string, 0, (int)scanner_mode, ini_parser_cb, return_value) == FAILURE) {
-		zval_dtor(return_value);
+		zend_array_destroy(Z_ARR_P(return_value));
 		RETVAL_FALSE;
 	}
 	efree(string);
@@ -6136,7 +6149,7 @@ PHP_FUNCTION(config_get_hash) /* {{{ */
 	HashTable *hash = php_ini_get_configuration_hash();
 
 	array_init(return_value);
-	zend_hash_apply_with_arguments(hash, add_config_entry_cb, 1, return_value);
+	add_config_entries(hash, return_value);
 }
 /* }}} */
 #endif

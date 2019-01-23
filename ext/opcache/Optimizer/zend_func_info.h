@@ -12,7 +12,7 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Authors: Dmitry Stogov <dmitry@zend.com>                             |
+   | Authors: Dmitry Stogov <dmitry@php.net>                              |
    +----------------------------------------------------------------------+
 */
 
@@ -22,11 +22,12 @@
 #include "zend_ssa.h"
 
 /* func flags */
-#define ZEND_FUNC_INDIRECT_VAR_ACCESS      (1<<0)  /* accesses varables by name   */
+#define ZEND_FUNC_INDIRECT_VAR_ACCESS      (1<<0)  /* accesses variables by name  */
 #define ZEND_FUNC_HAS_CALLS                (1<<1)
 #define ZEND_FUNC_VARARG                   (1<<2)  /* uses func_get_args()        */
 #define ZEND_FUNC_NO_LOOPS                 (1<<3)
 #define ZEND_FUNC_IRREDUCIBLE              (1<<4)
+#define ZEND_FUNC_FREE_LOOP_VAR            (1<<5)
 #define ZEND_FUNC_RECURSIVE                (1<<7)
 #define ZEND_FUNC_RECURSIVE_DIRECTLY       (1<<8)
 #define ZEND_FUNC_RECURSIVE_INDIRECTLY     (1<<9)

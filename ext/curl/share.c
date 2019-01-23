@@ -16,8 +16,6 @@
    +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
-
 #define ZEND_INCLUDE_FULL_WINDOWS_HEADERS
 
 #ifdef HAVE_CONFIG_H
@@ -88,11 +86,8 @@ static int _php_curl_share_setopt(php_curlsh *sh, zend_long option, zval *zvalue
 	}
 
 	SAVE_CURLSH_ERROR(sh, error);
-	if (error != CURLSHE_OK) {
-		return 1;
-	} else {
-		return 0;
-	}
+
+	return error != CURLSHE_OK;
 }
 /* }}} */
 

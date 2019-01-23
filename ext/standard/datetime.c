@@ -12,13 +12,11 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Authors: Andi Gutmans <andi@zend.com>                                |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   | Authors: Andi Gutmans <andi@php.net>                                 |
+   |          Zeev Suraski <zeev@php.net>                                 |
    |          Rasmus Lerdorf <rasmus@php.net>                             |
    +----------------------------------------------------------------------+
  */
-
-/* $Id$ */
 
 #include "php.h"
 #include "zend_operators.h"
@@ -31,18 +29,8 @@
 #endif
 #include <stdio.h>
 
-static const char * const mon_full_names[] = {
-	"January", "February", "March", "April",
-	"May", "June", "July", "August",
-	"September", "October", "November", "December"
-};
-
 static const char * const mon_short_names[] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
-static const char * const day_full_names[] = {
-	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 };
 
 static const char * const day_short_names[] = {

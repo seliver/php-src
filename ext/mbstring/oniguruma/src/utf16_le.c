@@ -36,16 +36,19 @@ init(void)
     int id;
     OnigEncoding enc;
     char* name;
-    unsigned int t_long;
     unsigned int args[4];
     OnigValue    opts[4];
 
     enc = ONIG_ENCODING_UTF16_LE;
-    t_long = ONIG_TYPE_LONG;
 
     name = "F\000A\000I\000L\000\000\000";            BC0_P(name, fail);
     name = "M\000I\000S\000M\000A\000T\000C\000H\000\000\000"; BC0_P(name, mismatch);
-    name = "M\000A\000X\000\000\000";                 BC_B(name, max,   1, &t_long);
+
+    name = "M\000A\000X\000\000\000";
+    args[0] = ONIG_TYPE_TAG | ONIG_TYPE_LONG;
+    args[1] = ONIG_TYPE_CHAR;
+    opts[0].c = 'X';
+    BC_B_O(name, max, 2, args, 1, opts);
 
     name = "E\000R\000R\000O\000R\000\000\000";
     args[0] = ONIG_TYPE_LONG; opts[0].l = ONIG_ABORT;
@@ -138,13 +141,14 @@ utf16le_is_mbc_newline(const UChar* p, const UChar* end)
 }
 
 static OnigCodePoint
-utf16le_mbc_to_code(const UChar* p, const UChar* end ARG_UNUSED)
+utf16le_mbc_to_code(const UChar* p, const UChar* end)
 {
   OnigCodePoint code;
   UChar c0 = *p;
   UChar c1 = *(p+1);
 
   if (UTF16_IS_SURROGATE_FIRST(c1)) {
+    if (end - p < 4) return 0;
     code = ((((c1 - 0xd8) << 2) + ((c0  & 0xc0) >> 6) + 1) << 16)
          + ((((c0 & 0x3f) << 2) + (p[3] - 0xdc)) << 8)
          + p[2];
@@ -282,5 +286,7 @@ OnigEncodingType OnigEncodingUTF16_LE = {
   onigenc_always_false_is_allowed_reverse_match,
   init,
   0, /* is_initialized */
-  is_valid_mbc_string
+  is_valid_mbc_string,
+  ENC_FLAG_UNICODE,
+  0, 0
 };

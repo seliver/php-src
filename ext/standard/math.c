@@ -14,12 +14,10 @@
    +----------------------------------------------------------------------+
    | Authors: Jim Winstead <jimw@php.net>                                 |
    |          Stig Sæther Bakken <ssb@php.net>                            |
-   |          Zeev Suraski <zeev@zend.com>                                |
+   |          Zeev Suraski <zeev@php.net>                                 |
    | PHP 4.0 patches by Thies C. Arntzen <thies@thieso.net>               |
    +----------------------------------------------------------------------+
 */
-
-/* $Id$ */
 
 #include "php.h"
 #include "php_math.h"
@@ -1232,7 +1230,7 @@ PHPAPI zend_string *_php_math_number_format_ex(double d, int dec, char *dec_poin
 	}
 
 	ZSTR_LEN(res) = reslen;
-	zend_string_release(tmpbuf);
+	zend_string_release_ex(tmpbuf, 0);
 	return res;
 }
 

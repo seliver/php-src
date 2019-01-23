@@ -12,7 +12,7 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Authors: Dmitry Stogov <dmitry@zend.com>                             |
+   | Authors: Dmitry Stogov <dmitry@php.net>                              |
    +----------------------------------------------------------------------+
 */
 
@@ -113,7 +113,7 @@ typedef struct _zend_ssa_var {
 	zend_ssa_phi          *definition_phi; /* phi that defines this value */
 	int                    use_chain;      /* uses of this value, linked through opN_use_chain */
 	zend_ssa_phi          *phi_use_chain;  /* uses of this value in Phi, linked through use_chain */
-	zend_ssa_phi          *sym_use_chain;  /* uses of this value in Pi constaints */
+	zend_ssa_phi          *sym_use_chain;  /* uses of this value in Pi constraints */
 	unsigned int           no_val : 1;     /* value doesn't mater (used as op1 in ZEND_ASSIGN) */
 	unsigned int           scc_entry : 1;
 	unsigned int           alias : 2;  /* value may be changed indirectly */
