@@ -144,7 +144,7 @@ static int _gdImageGifCtx(gdImagePtr im, gdIOCtxPtr out)
 	BitsPerPixel = colorstobpp(tim->colorsTotal);
 	/* All set, let's do it. */
 	GIFEncode(
-		out, tim->sx, tim->sy, tim->interlace, 0, tim->transparent, BitsPerPixel,
+		out, tim->sx, tim->sy, interlace, 0, tim->transparent, BitsPerPixel,
 		tim->red, tim->green, tim->blue, tim);
 	if (pim) {
 		/* Destroy palette based temporary image. */
@@ -548,7 +548,7 @@ compress(int init_bits, gdIOCtxPtr outfile, gdImagePtr im, GifCtx *ctx)
     output( (code_int)ctx->ClearCode, ctx );
 
 #ifdef SIGNED_COMPARE_SLOW
-    while ( (c = GIFNextPixel( im )) != (unsigned) EOF ) {
+    while ( (c = GIFNextPixel( im, ctx )) != (unsigned) EOF ) {
 #else /*SIGNED_COMPARE_SLOW*/
     while ( (c = GIFNextPixel( im, ctx )) != EOF ) {  /* } */
 #endif /*SIGNED_COMPARE_SLOW*/

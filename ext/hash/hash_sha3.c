@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -51,14 +49,14 @@ static inline uint64_t load64(const unsigned char* x) {
 	return ret;
 }
 static inline void store64(unsigned char* x, uint64_t val) {
-	char i;
+	size_t i;
 	for (i = 0; i < 8; ++i) {
 		x[i] = val & 0xFF;
 		val >>= 8;
 	}
 }
 static inline void xor64(unsigned char* x, uint64_t val) {
-	char i;
+	size_t i;
 	for (i = 0; i < 8; ++i) {
 		x[i] ^= val & 0xFF;
 		val >>= 8;
@@ -200,7 +198,7 @@ static void PHP_SHA3_Final(unsigned char* digest,
 	}
 
 	// Zero out context
-	memset(ctx, 0, sizeof(PHP_SHA3_CTX));
+	ZEND_SECURE_ZERO(ctx, sizeof(PHP_SHA3_CTX));
 }
 
 // ==========================================================================
@@ -286,12 +284,3 @@ DECLARE_SHA3_OPS(384);
 DECLARE_SHA3_OPS(512);
 
 #undef DECLARE_SHA3_OPS
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

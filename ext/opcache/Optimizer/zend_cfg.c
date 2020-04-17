@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine, CFG - Control Flow Graph                                |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -74,8 +74,8 @@ static void zend_mark_reachable(zend_op *opcodes, zend_cfg *cfg, zend_basic_bloc
 					}
 				} else {
 					ZEND_ASSERT(opcode == ZEND_SWITCH_LONG || opcode == ZEND_SWITCH_STRING);
-					if (i == b->successors_count) {
-						succ->flags |= ZEND_BB_FOLLOW;
+					if (i == b->successors_count - 1) {
+						succ->flags |= ZEND_BB_FOLLOW | ZEND_BB_TARGET;
 					} else {
 						succ->flags |= ZEND_BB_TARGET;
 					}
@@ -93,7 +93,7 @@ static void zend_mark_reachable(zend_op *opcodes, zend_cfg *cfg, zend_basic_bloc
 				b = succ;
 				break;
 			} else {
-				/* Recusively check reachability */
+				/* Recursively check reachability */
 				if (!(succ->flags & ZEND_BB_REACHABLE)) {
 					zend_mark_reachable(opcodes, cfg, succ);
 				}
@@ -208,9 +208,7 @@ static void zend_mark_reachable_blocks(const zend_op_array *op_array, zend_cfg *
 
 			for (j = b->start; j < b->start + b->len; j++) {
 				zend_op *opline = &op_array->opcodes[j];
-				if (opline->opcode == ZEND_FE_FREE ||
-					(opline->opcode == ZEND_FREE && opline->extended_value == ZEND_FREE_SWITCH)
-				) {
+				if (zend_optimizer_is_loop_var_free(opline)) {
 					zend_op *def_opline = zend_optimizer_get_loop_var_def(op_array, opline);
 					if (def_opline) {
 						uint32_t def_block = block_map[def_opline - op_array->opcodes];
@@ -375,8 +373,6 @@ int zend_build_cfg(zend_arena **arena, const zend_op_array *op_array, uint32_t b
 				}
 				BB_START(i + 1);
 				break;
-			case ZEND_DECLARE_ANON_CLASS:
-			case ZEND_DECLARE_ANON_INHERITED_CLASS:
 			case ZEND_FE_FETCH_R:
 			case ZEND_FE_FETCH_RW:
 				BB_START(ZEND_OFFSET_TO_OPLINE_NUM(op_array, opline, opline->extended_value));
@@ -419,9 +415,11 @@ int zend_build_cfg(zend_arena **arena, const zend_op_array *op_array, uint32_t b
 				break;
 			case ZEND_EXT_NOP:
 			case ZEND_EXT_STMT:
+				flags |= ZEND_FUNC_HAS_EXTENDED_STMT;
+				break;
 			case ZEND_EXT_FCALL_BEGIN:
 			case ZEND_EXT_FCALL_END:
-				flags |= ZEND_FUNC_HAS_EXTENDED_INFO;
+				flags |= ZEND_FUNC_HAS_EXTENDED_FCALL;
 				break;
 			case ZEND_FREE:
 				if (opline->extended_value == ZEND_FREE_SWITCH) {
@@ -534,8 +532,6 @@ int zend_build_cfg(zend_arena **arena, const zend_op_array *op_array, uint32_t b
 					block->successors[0] = j + 1;
 				}
 				break;
-			case ZEND_DECLARE_ANON_CLASS:
-			case ZEND_DECLARE_ANON_INHERITED_CLASS:
 			case ZEND_FE_FETCH_R:
 			case ZEND_FE_FETCH_RW:
 				block->successors_count = 2;
@@ -895,11 +891,3 @@ int zend_cfg_identify_loops(const zend_op_array *op_array, zend_cfg *cfg) /* {{{
 	return SUCCESS;
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- */

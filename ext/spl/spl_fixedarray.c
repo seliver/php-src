@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -27,6 +25,7 @@
 #include "zend_exceptions.h"
 
 #include "php_spl.h"
+#include "spl_fixedarray_arginfo.h"
 #include "spl_functions.h"
 #include "spl_engine.h"
 #include "spl_fixedarray.h"
@@ -78,12 +77,19 @@ static inline spl_fixedarray_object *spl_fixed_array_from_obj(zend_object *obj) 
 
 #define Z_SPLFIXEDARRAY_P(zv)  spl_fixed_array_from_obj(Z_OBJ_P((zv)))
 
+static inline void spl_fixedarray_init_elems(spl_fixedarray *array, size_t from, size_t to) {
+	for (size_t i = from; i < to; i++) {
+		ZVAL_NULL(&array->elements[i]);
+	}
+}
+
 static void spl_fixedarray_init(spl_fixedarray *array, zend_long size) /* {{{ */
 {
 	if (size > 0) {
 		array->size = 0; /* reset size in case ecalloc() fails */
-		array->elements = ecalloc(size, sizeof(zval));
+		array->elements = safe_emalloc(size, sizeof(zval), 0);
 		array->size = size;
+		spl_fixedarray_init_elems(array, 0, size);
 	} else {
 		array->elements = NULL;
 		array->size = 0;
@@ -118,7 +124,7 @@ static void spl_fixedarray_resize(spl_fixedarray *array, zend_long size) /* {{{ 
 		}
 	} else if (size > array->size) {
 		array->elements = safe_erealloc(array->elements, size, sizeof(zval), 0);
-		memset(array->elements + array->size, '\0', sizeof(zval) * (size - array->size));
+		spl_fixedarray_init_elems(array, array->size, size);
 	} else { /* size < array->size */
 		zend_long i;
 
@@ -141,9 +147,9 @@ static void spl_fixedarray_copy(spl_fixedarray *to, spl_fixedarray *from) /* {{{
 }
 /* }}} */
 
-static HashTable* spl_fixedarray_object_get_gc(zval *obj, zval **table, int *n) /* {{{{ */
+static HashTable* spl_fixedarray_object_get_gc(zend_object *obj, zval **table, int *n) /* {{{{ */
 {
-	spl_fixedarray_object *intern  = Z_SPLFIXEDARRAY_P(obj);
+	spl_fixedarray_object *intern = spl_fixed_array_from_obj(obj);
 	HashTable *ht = zend_std_get_properties(obj);
 
 	*table = intern->array.elements;
@@ -153,9 +159,9 @@ static HashTable* spl_fixedarray_object_get_gc(zval *obj, zval **table, int *n) 
 }
 /* }}}} */
 
-static HashTable* spl_fixedarray_object_get_properties(zval *obj) /* {{{{ */
+static HashTable* spl_fixedarray_object_get_properties(zend_object *obj) /* {{{{ */
 {
-	spl_fixedarray_object *intern  = Z_SPLFIXEDARRAY_P(obj);
+	spl_fixedarray_object *intern = spl_fixed_array_from_obj(obj);
 	HashTable *ht = zend_std_get_properties(obj);
 	zend_long  i = 0;
 
@@ -163,12 +169,8 @@ static HashTable* spl_fixedarray_object_get_properties(zval *obj) /* {{{{ */
 		zend_long j = zend_hash_num_elements(ht);
 
 		for (i = 0; i < intern->array.size; i++) {
-			if (!Z_ISUNDEF(intern->array.elements[i])) {
-				zend_hash_index_update(ht, i, &intern->array.elements[i]);
-				Z_TRY_ADDREF(intern->array.elements[i]);
-			} else {
-				zend_hash_index_update(ht, i, &EG(uninitialized_zval));
-			}
+			zend_hash_index_update(ht, i, &intern->array.elements[i]);
+			Z_TRY_ADDREF(intern->array.elements[i]);
 		}
 		if (j > intern->array.size) {
 			for (i = intern->array.size; i < j; ++i) {
@@ -202,7 +204,7 @@ static void spl_fixedarray_object_free_storage(zend_object *object) /* {{{ */
 
 zend_object_iterator *spl_fixedarray_get_iterator(zend_class_entry *ce, zval *object, int by_ref);
 
-static zend_object *spl_fixedarray_object_new_ex(zend_class_entry *class_type, zval *orig, int clone_orig) /* {{{ */
+static zend_object *spl_fixedarray_object_new_ex(zend_class_entry *class_type, zend_object *orig, int clone_orig) /* {{{ */
 {
 	spl_fixedarray_object *intern;
 	zend_class_entry     *parent = class_type;
@@ -218,7 +220,7 @@ static zend_object *spl_fixedarray_object_new_ex(zend_class_entry *class_type, z
 	intern->flags = 0;
 
 	if (orig && clone_orig) {
-		spl_fixedarray_object *other = Z_SPLFIXEDARRAY_P(orig);
+		spl_fixedarray_object *other = spl_fixed_array_from_obj(orig);
 		intern->ce_get_iterator = other->ce_get_iterator;
 		spl_fixedarray_init(&intern->array, other->array.size);
 		spl_fixedarray_copy(&intern->array, &other->array);
@@ -227,7 +229,6 @@ static zend_object *spl_fixedarray_object_new_ex(zend_class_entry *class_type, z
 	while (parent) {
 		if (parent == spl_ce_SplFixedArray) {
 			intern->std.handlers = &spl_handler_SplFixedArray;
-			class_type->get_iterator = spl_fixedarray_get_iterator;
 			break;
 		}
 
@@ -296,13 +297,9 @@ static zend_object *spl_fixedarray_new(zend_class_entry *class_type) /* {{{ */
 }
 /* }}} */
 
-static zend_object *spl_fixedarray_object_clone(zval *zobject) /* {{{ */
+static zend_object *spl_fixedarray_object_clone(zend_object *old_object) /* {{{ */
 {
-	zend_object *old_object;
-	zend_object *new_object;
-
-	old_object  = Z_OBJ_P(zobject);
-	new_object = spl_fixedarray_object_new_ex(old_object->ce, zobject, 1);
+	zend_object *new_object = spl_fixedarray_object_new_ex(old_object->ce, old_object, 1);
 
 	zend_objects_clone_members(new_object, old_object);
 
@@ -330,33 +327,22 @@ static inline zval *spl_fixedarray_object_read_dimension_helper(spl_fixedarray_o
 	if (index < 0 || index >= intern->array.size) {
 		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0);
 		return NULL;
-	} else if (Z_ISUNDEF(intern->array.elements[index])) {
-		return NULL;
 	} else {
 		return &intern->array.elements[index];
 	}
 }
 /* }}} */
 
-static zval *spl_fixedarray_object_read_dimension(zval *object, zval *offset, int type, zval *rv) /* {{{ */
+static int spl_fixedarray_object_has_dimension(zend_object *object, zval *offset, int check_empty);
+
+static zval *spl_fixedarray_object_read_dimension(zend_object *object, zval *offset, int type, zval *rv) /* {{{ */
 {
 	spl_fixedarray_object *intern;
 
-	intern = Z_SPLFIXEDARRAY_P(object);
+	intern = spl_fixed_array_from_obj(object);
 
-	if (type == BP_VAR_IS && intern->fptr_offset_has) {
-		SEPARATE_ARG_IF_REF(offset);
-		zend_call_method_with_1_params(object, intern->std.ce, &intern->fptr_offset_has, "offsetexists", rv, offset);
-		if (UNEXPECTED(Z_ISUNDEF_P(rv))) {
-			zval_ptr_dtor(offset);
-			return NULL;
-		}
-		if (!i_zend_is_true(rv)) {
-			zval_ptr_dtor(offset);
-			zval_ptr_dtor(rv);
-			return &EG(uninitialized_zval);
-		}
-		zval_ptr_dtor(rv);
+	if (type == BP_VAR_IS && !spl_fixedarray_object_has_dimension(object, offset, 0)) {
+		return &EG(uninitialized_zval);
 	}
 
 	if (intern->fptr_offset_get) {
@@ -399,20 +385,18 @@ static inline void spl_fixedarray_object_write_dimension_helper(spl_fixedarray_o
 		zend_throw_exception(spl_ce_RuntimeException, "Index invalid or out of range", 0);
 		return;
 	} else {
-		if (!Z_ISUNDEF(intern->array.elements[index])) {
-			zval_ptr_dtor(&(intern->array.elements[index]));
-		}
+		zval_ptr_dtor(&(intern->array.elements[index]));
 		ZVAL_COPY_DEREF(&intern->array.elements[index], value);
 	}
 }
 /* }}} */
 
-static void spl_fixedarray_object_write_dimension(zval *object, zval *offset, zval *value) /* {{{ */
+static void spl_fixedarray_object_write_dimension(zend_object *object, zval *offset, zval *value) /* {{{ */
 {
 	spl_fixedarray_object *intern;
 	zval tmp;
 
-	intern = Z_SPLFIXEDARRAY_P(object);
+	intern = spl_fixed_array_from_obj(object);
 
 	if (intern->fptr_offset_set) {
 		if (!offset) {
@@ -447,16 +431,16 @@ static inline void spl_fixedarray_object_unset_dimension_helper(spl_fixedarray_o
 		return;
 	} else {
 		zval_ptr_dtor(&(intern->array.elements[index]));
-		ZVAL_UNDEF(&intern->array.elements[index]);
+		ZVAL_NULL(&intern->array.elements[index]);
 	}
 }
 /* }}} */
 
-static void spl_fixedarray_object_unset_dimension(zval *object, zval *offset) /* {{{ */
+static void spl_fixedarray_object_unset_dimension(zend_object *object, zval *offset) /* {{{ */
 {
 	spl_fixedarray_object *intern;
 
-	intern = Z_SPLFIXEDARRAY_P(object);
+	intern = spl_fixed_array_from_obj(object);
 
 	if (intern->fptr_offset_del) {
 		SEPARATE_ARG_IF_REF(offset);
@@ -466,7 +450,6 @@ static void spl_fixedarray_object_unset_dimension(zval *object, zval *offset) /*
 	}
 
 	spl_fixedarray_object_unset_dimension_helper(intern, offset);
-
 }
 /* }}} */
 
@@ -484,16 +467,10 @@ static inline int spl_fixedarray_object_has_dimension_helper(spl_fixedarray_obje
 	if (index < 0 || index >= intern->array.size) {
 		retval = 0;
 	} else {
-		if (Z_ISUNDEF(intern->array.elements[index])) {
-			retval = 0;
-		} else if (check_empty) {
-			if (zend_is_true(&intern->array.elements[index])) {
-				retval = 1;
-			} else {
-				retval = 0;
-			}
-		} else { /* != NULL and !check_empty */
-			retval = 1;
+		if (check_empty) {
+			retval = zend_is_true(&intern->array.elements[index]);
+		} else {
+			retval = Z_TYPE(intern->array.elements[index]) != IS_NULL;
 		}
 	}
 
@@ -501,11 +478,11 @@ static inline int spl_fixedarray_object_has_dimension_helper(spl_fixedarray_obje
 }
 /* }}} */
 
-static int spl_fixedarray_object_has_dimension(zval *object, zval *offset, int check_empty) /* {{{ */
+static int spl_fixedarray_object_has_dimension(zend_object *object, zval *offset, int check_empty) /* {{{ */
 {
 	spl_fixedarray_object *intern;
 
-	intern = Z_SPLFIXEDARRAY_P(object);
+	intern = spl_fixed_array_from_obj(object);
 
 	if (intern->fptr_offset_has) {
 		zval rv;
@@ -523,11 +500,11 @@ static int spl_fixedarray_object_has_dimension(zval *object, zval *offset, int c
 }
 /* }}} */
 
-static int spl_fixedarray_object_count_elements(zval *object, zend_long *count) /* {{{ */
+static int spl_fixedarray_object_count_elements(zend_object *object, zend_long *count) /* {{{ */
 {
 	spl_fixedarray_object *intern;
 
-	intern = Z_SPLFIXEDARRAY_P(object);
+	intern = spl_fixed_array_from_obj(object);
 	if (intern->fptr_count) {
 		zval rv;
 		zend_call_method_with_0_params(object, intern->std.ce, &intern->fptr_count, "count", &rv);
@@ -552,13 +529,13 @@ SPL_METHOD(SplFixedArray, __construct)
 	spl_fixedarray_object *intern;
 	zend_long size = 0;
 
-	if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "|l", &size) == FAILURE) {
-		return;
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "|l", &size) == FAILURE) {
+		RETURN_THROWS();
 	}
 
 	if (size < 0) {
 		zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "array size cannot be less than zero");
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(object);
@@ -577,11 +554,11 @@ SPL_METHOD(SplFixedArray, __construct)
 SPL_METHOD(SplFixedArray, __wakeup)
 {
 	spl_fixedarray_object *intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
-	HashTable *intern_ht = zend_std_get_properties(ZEND_THIS);
+	HashTable *intern_ht = zend_std_get_properties(Z_OBJ_P(ZEND_THIS));
 	zval *data;
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if (intern->array.size == 0) {
@@ -610,7 +587,7 @@ SPL_METHOD(SplFixedArray, count)
 	spl_fixedarray_object *intern;
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(object);
@@ -625,7 +602,7 @@ SPL_METHOD(SplFixedArray, toArray)
 	spl_fixedarray_object *intern;
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
@@ -635,20 +612,16 @@ SPL_METHOD(SplFixedArray, toArray)
 
 		array_init(return_value);
 		for (; i < intern->array.size; i++) {
-			if (!Z_ISUNDEF(intern->array.elements[i])) {
-				zend_hash_index_update(Z_ARRVAL_P(return_value), i, &intern->array.elements[i]);
-				Z_TRY_ADDREF(intern->array.elements[i]);
-			} else {
-				zend_hash_index_update(Z_ARRVAL_P(return_value), i, &EG(uninitialized_zval));
-			}
+			zend_hash_index_update(Z_ARRVAL_P(return_value), i, &intern->array.elements[i]);
+			Z_TRY_ADDREF(intern->array.elements[i]);
 		}
 	} else {
-		ZVAL_EMPTY_ARRAY(return_value);
+		RETURN_EMPTY_ARRAY();
 	}
 }
 /* }}} */
 
-/* {{{ proto object SplFixedArray::fromArray(array data[, bool save_indexes])
+/* {{{ proto object SplFixedArray::fromArray(array array[, bool save_indexes])
 */
 SPL_METHOD(SplFixedArray, fromArray)
 {
@@ -659,7 +632,7 @@ SPL_METHOD(SplFixedArray, fromArray)
 	zend_bool save_indexes = 1;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "a|b", &data, &save_indexes) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	num = zend_hash_num_elements(Z_ARRVAL_P(data));
@@ -673,7 +646,7 @@ SPL_METHOD(SplFixedArray, fromArray)
 		ZEND_HASH_FOREACH_KEY(Z_ARRVAL_P(data), num_index, str_index) {
 			if (str_index != NULL || (zend_long)num_index < 0) {
 				zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "array must contain only positive integer keys");
-				return;
+				RETURN_THROWS();
 			}
 
 			if (num_index > max_index) {
@@ -684,7 +657,7 @@ SPL_METHOD(SplFixedArray, fromArray)
 		tmp = max_index + 1;
 		if (tmp <= 0) {
 			zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "integer overflow detected");
-			return;
+			RETURN_THROWS();
 		}
 		spl_fixedarray_init(&array, tmp);
 
@@ -721,7 +694,7 @@ SPL_METHOD(SplFixedArray, getSize)
 	spl_fixedarray_object *intern;
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(object);
@@ -738,12 +711,12 @@ SPL_METHOD(SplFixedArray, setSize)
 	zend_long size;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &size) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if (size < 0) {
 		zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0, "array size cannot be less than zero");
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(object);
@@ -761,7 +734,7 @@ SPL_METHOD(SplFixedArray, offsetExists)
 	spl_fixedarray_object  *intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &zindex) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
@@ -777,7 +750,7 @@ SPL_METHOD(SplFixedArray, offsetGet)
 	spl_fixedarray_object  *intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &zindex) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
@@ -798,7 +771,7 @@ SPL_METHOD(SplFixedArray, offsetSet)
 	spl_fixedarray_object  *intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zindex, &value) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
@@ -814,7 +787,7 @@ SPL_METHOD(SplFixedArray, offsetUnset)
 	spl_fixedarray_object  *intern;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &zindex) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
@@ -913,7 +886,7 @@ SPL_METHOD(SplFixedArray, key)
 	spl_fixedarray_object *intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	RETURN_LONG(intern->current);
@@ -927,7 +900,7 @@ SPL_METHOD(SplFixedArray, next)
 	spl_fixedarray_object *intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern->current++;
@@ -941,7 +914,7 @@ SPL_METHOD(SplFixedArray, valid)
 	spl_fixedarray_object *intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	RETURN_BOOL(intern->current >= 0 && intern->current < intern->array.size);
@@ -955,7 +928,7 @@ SPL_METHOD(SplFixedArray, rewind)
 	spl_fixedarray_object *intern = Z_SPLFIXEDARRAY_P(ZEND_THIS);
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	intern->current = 0;
@@ -970,7 +943,7 @@ SPL_METHOD(SplFixedArray, current)
 	spl_fixedarray_object *intern  = Z_SPLFIXEDARRAY_P(ZEND_THIS);
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	ZVAL_LONG(&zindex, intern->current);
@@ -1009,7 +982,8 @@ zend_object_iterator *spl_fixedarray_get_iterator(zend_class_entry *ce, zval *ob
 
 	zend_iterator_init((zend_object_iterator*)iterator);
 
-	ZVAL_COPY(&iterator->intern.it.data, object);
+	Z_ADDREF_P(object);
+	ZVAL_OBJ(&iterator->intern.it.data, Z_OBJ_P(object));
 	iterator->intern.it.funcs = &spl_fixedarray_it_funcs;
 	iterator->intern.ce = ce;
 	ZVAL_UNDEF(&iterator->intern.value);
@@ -1018,48 +992,23 @@ zend_object_iterator *spl_fixedarray_get_iterator(zend_class_entry *ce, zval *ob
 }
 /* }}} */
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_splfixedarray_construct, 0, 0, 0)
-	ZEND_ARG_INFO(0, size)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_fixedarray_offsetGet, 0, 0, 1)
-	ZEND_ARG_INFO(0, index)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_fixedarray_offsetSet, 0, 0, 2)
-	ZEND_ARG_INFO(0, index)
-	ZEND_ARG_INFO(0, newval)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO(arginfo_fixedarray_setSize, 0)
-	ZEND_ARG_INFO(0, value)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_fixedarray_fromArray, 0, 0, 1)
-	ZEND_ARG_INFO(0, data)
-	ZEND_ARG_INFO(0, save_indexes)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO(arginfo_splfixedarray_void, 0)
-ZEND_END_ARG_INFO()
-
 static const zend_function_entry spl_funcs_SplFixedArray[] = { /* {{{ */
-	SPL_ME(SplFixedArray, __construct,     arginfo_splfixedarray_construct,ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, __wakeup,        arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, count,           arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, toArray,         arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, fromArray,       arginfo_fixedarray_fromArray,   ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
-	SPL_ME(SplFixedArray, getSize,         arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, setSize,         arginfo_fixedarray_setSize,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, offsetExists,    arginfo_fixedarray_offsetGet,   ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, offsetGet,       arginfo_fixedarray_offsetGet,   ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, offsetSet,       arginfo_fixedarray_offsetSet,   ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, offsetUnset,     arginfo_fixedarray_offsetGet,   ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, rewind,          arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, current,         arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, key,             arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, next,            arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
-	SPL_ME(SplFixedArray, valid,           arginfo_splfixedarray_void,     ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, __construct,     arginfo_class_SplFixedArray___construct,		ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, __wakeup,        arginfo_class_SplFixedArray___wakeup,		ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, count,           arginfo_class_SplFixedArray_count,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, toArray,         arginfo_class_SplFixedArray_toArray,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, fromArray,       arginfo_class_SplFixedArray_fromArray,		ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+	SPL_ME(SplFixedArray, getSize,         arginfo_class_SplFixedArray_getSize,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, setSize,         arginfo_class_SplFixedArray_setSize,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, offsetExists,    arginfo_class_SplFixedArray_offsetExists,	ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, offsetGet,       arginfo_class_SplFixedArray_offsetGet,		ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, offsetSet,       arginfo_class_SplFixedArray_offsetSet,		ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, offsetUnset,     arginfo_class_SplFixedArray_offsetUnset,		ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, rewind,          arginfo_class_SplFixedArray_rewind,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, current,         arginfo_class_SplFixedArray_current,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, key,             arginfo_class_SplFixedArray_key,				ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, next,            arginfo_class_SplFixedArray_next,			ZEND_ACC_PUBLIC)
+	SPL_ME(SplFixedArray, valid,           arginfo_class_SplFixedArray_valid,			ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 /* }}} */
@@ -1087,17 +1036,8 @@ PHP_MINIT_FUNCTION(spl_fixedarray)
 	REGISTER_SPL_IMPLEMENTS(SplFixedArray, Countable);
 
 	spl_ce_SplFixedArray->get_iterator = spl_fixedarray_get_iterator;
+	spl_ce_SplFixedArray->ce_flags |= ZEND_ACC_REUSE_GET_ITERATOR;
 
 	return SUCCESS;
 }
 /* }}} */
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

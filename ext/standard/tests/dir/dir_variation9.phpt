@@ -23,7 +23,7 @@ echo "*** Testing dir() : checking with valid and invalid paths ***\n";
 
 /* create the temporary directories */
 
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 
 // directory dir_variation91 with one sub-directory sub_dir11 and sub-sub-directory sub_dir111
 $dir_path1 = $file_path."/dir_variation91";
@@ -58,7 +58,7 @@ echo "Done";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 
 $dir_path1 = $file_path."/dir_variation91";
 $sub_dir11 = $dir_path1."/sub_dir11";
@@ -103,15 +103,15 @@ object(Directory)#%d (2) {
 
 -- With invalid paths --
 
-Warning: dir(%s/dir_variation91/sub_dir12/sub_dir111/..): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_variation91/sub_dir12/sub_dir111/..): Failed to open directory: %s in %s on line %d
 bool(false)
 
-Warning: dir(%s/dir_variation92/sub_dir21/../dir_variation91): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_variation92/sub_dir21/../dir_variation91): Failed to open directory: %s in %s on line %d
 bool(false)
 
-Warning: dir(%s/dir_variation92/sub_dir21/../../dir_variation91/sub_dir12/..): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_variation92/sub_dir21/../../dir_variation91/sub_dir12/..): Failed to open directory: %s in %s on line %d
 bool(false)
 
-Warning: dir(%s/dir_variation91/sub_dir11/sub_dir111/../../dir_variation92/sub_dir21/..): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_variation91/sub_dir11/sub_dir111/../../dir_variation92/sub_dir21/..): Failed to open directory: %s in %s on line %d
 bool(false)
 Done

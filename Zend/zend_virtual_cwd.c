@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -67,10 +65,6 @@
 # include <winnt.h>
 #endif
 
-#ifndef HAVE_REALPATH
-#define realpath(x,y) strcpy(y,x)
-#endif
-
 #define VIRTUAL_CWD_DEBUG 0
 
 #include "TSRM.h"
@@ -82,6 +76,7 @@ MUTEX_T cwd_mutex;
 
 #ifdef ZTS
 ts_rsrc_id cwd_globals_id;
+size_t     cwd_globals_offset;
 #else
 virtual_cwd_globals cwd_globals;
 #endif
@@ -92,6 +87,8 @@ static cwd_state main_cwd_state; /* True global */
 #include <unistd.h>
 #else
 #include <direct.h>
+#include "zend_globals.h"
+#include "zend_globals_macros.h"
 #endif
 
 #define CWD_STATE_COPY(d, s)				\
@@ -185,7 +182,7 @@ CWD_API void virtual_cwd_startup(void) /* {{{ */
 {
 	virtual_cwd_main_cwd_init(0);
 #ifdef ZTS
-	ts_allocate_id(&cwd_globals_id, sizeof(virtual_cwd_globals), (ts_allocate_ctor) cwd_globals_ctor, (ts_allocate_dtor) cwd_globals_dtor);
+	ts_allocate_fast_id(&cwd_globals_id, &cwd_globals_offset, sizeof(virtual_cwd_globals), (ts_allocate_ctor) cwd_globals_ctor, (ts_allocate_dtor) cwd_globals_dtor);
 #else
 	cwd_globals_ctor(&cwd_globals);
 #endif
@@ -607,6 +604,7 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 		tmp = do_alloca(len+1, use_heap);
 		memcpy(tmp, path, len+1);
 
+retry:
 		if(save &&
 				!(IS_UNC_PATH(path, len) && len >= 3 && path[2] != '?') &&
                                (dataw.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
@@ -654,7 +652,21 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 				return (size_t)-1;
 			}
 			if(!DeviceIoControl(hLink, FSCTL_GET_REPARSE_POINT, NULL, 0, pbuffer,  MAXIMUM_REPARSE_DATA_BUFFER_SIZE, &retlength, NULL)) {
+				BY_HANDLE_FILE_INFORMATION fileInformation;
+
 				free_alloca(pbuffer, use_heap_large);
+				if ((dataw.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
+						(dataw.dwReserved0 & ~IO_REPARSE_TAG_CLOUD_MASK) == IO_REPARSE_TAG_CLOUD &&
+						EG(windows_version_info).dwMajorVersion >= 10 &&
+						EG(windows_version_info).dwMinorVersion == 0 &&
+						EG(windows_version_info).dwBuildNumber >= 18362 &&
+						GetFileInformationByHandle(hLink, &fileInformation) &&
+						!(fileInformation.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+					dataw.dwFileAttributes = fileInformation.dwFileAttributes;
+					CloseHandle(hLink);
+					(*ll)--;
+					goto retry;
+				}
 				free_alloca(tmp, use_heap);
 				CloseHandle(hLink);
 				FREE_PATHW()
@@ -734,8 +746,7 @@ static size_t tsrm_realpath_r(char *path, size_t start, size_t len, int *ll, tim
 			}
 			else if (pbuffer->ReparseTag == IO_REPARSE_TAG_DEDUP ||
 					/* Starting with 1709. */
-					(pbuffer->ReparseTag & IO_REPARSE_TAG_CLOUD_MASK) != 0 && 0x90001018L != pbuffer->ReparseTag ||
-					IO_REPARSE_TAG_CLOUD == pbuffer->ReparseTag ||
+					(pbuffer->ReparseTag & ~IO_REPARSE_TAG_CLOUD_MASK) == IO_REPARSE_TAG_CLOUD ||
 					IO_REPARSE_TAG_ONEDRIVE == pbuffer->ReparseTag) {
 				isabsolute = 1;
 				substitutename = malloc((len + 1) * sizeof(char));
@@ -1690,10 +1701,3 @@ CWD_API char *tsrm_realpath(const char *path, char *real_path) /* {{{ */
 	}
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- */

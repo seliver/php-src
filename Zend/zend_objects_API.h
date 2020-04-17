@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) Zend Technologies Ltd. (http://www.zend.com)           |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -107,7 +107,7 @@ static inline zend_property_info *zend_get_property_info_for_slot(zend_object *o
 static inline zend_property_info *zend_get_typed_property_info_for_slot(zend_object *obj, zval *slot)
 {
 	zend_property_info *prop_info = zend_get_property_info_for_slot(obj, slot);
-	if (prop_info && prop_info->type) {
+	if (prop_info && ZEND_TYPE_IS_SET(prop_info->type)) {
 		return prop_info;
 	}
 	return NULL;
@@ -115,13 +115,3 @@ static inline zend_property_info *zend_get_typed_property_info_for_slot(zend_obj
 
 
 #endif /* ZEND_OBJECTS_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

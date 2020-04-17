@@ -5,7 +5,7 @@ ocidefinebyname()
 --FILE--
 <?php
 
-require(dirname(__FILE__)."/connect.inc");
+require(__DIR__."/connect.inc");
 
 // Initialize
 
@@ -29,7 +29,7 @@ ocidefinebyname($stmt, "STRING", $string, 20);
 ociexecute($stmt);
 
 while (ocifetch($stmt)) {
-	var_dump($string);
+    var_dump($string);
 }
 
 // Cleanup

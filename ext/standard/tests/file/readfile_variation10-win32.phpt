@@ -7,6 +7,8 @@ Dave Kelsey <d_kelsey@uk.ibm.com>
 if(substr(PHP_OS, 0, 3) != "WIN")
   die("skip run only on Windows");
 ?>
+--CONFLICTS--
+obscure_filename
 --FILE--
 <?php
 /* Prototype  : int readfile(string filename [, bool use_include_path[, resource context]])
@@ -36,22 +38,25 @@ $names_arr = array(
 );
 
 foreach($names_arr as $key => $value) {
-      echo "\n-- Filename: $key --\n";
-      readfile($value);
+    echo "\n-- Filename: $key --\n";
+    try {
+        readfile($value);
+    } catch (TypeError $e) {
+        echo $e->getMessage(), "\n";
+    }
 };
 
 ?>
-===Done===
 --EXPECTF--
 *** Testing readfile() : variation ***
 
 -- Filename: -1 --
 
-Warning: readfile(-1): failed to open stream: No such file or directory in %s on line %d
+Warning: readfile(-1): Failed to open stream: No such file or directory in %s on line %d
 
 -- Filename: TRUE --
 
-Warning: readfile(1): failed to open stream: No such file or directory in %s on line %d
+Warning: readfile(1): Failed to open stream: No such file or directory in %s on line %d
 
 -- Filename: FALSE --
 
@@ -67,21 +72,18 @@ Warning: readfile(): Filename cannot be empty in %s on line %d
 
 -- Filename: " " --
 
-Warning: readfile( ): failed to open stream: Permission denied in %s on line %d
+Warning: readfile( ): Failed to open stream: Permission denied in %s on line %d
 
 -- Filename: \0 --
-
-Warning: readfile() expects parameter 1 to be a valid path, string given in %s on line %d
+readfile(): Argument #1 ($filename) must be a valid path, string given
 
 -- Filename: array() --
-
-Warning: readfile() expects parameter 1 to be a valid path, array given in %s on line %d
+readfile(): Argument #1 ($filename) must be a valid path, array given
 
 -- Filename: /no/such/file/dir --
 
-Warning: readfile(/no/such/file/dir): failed to open stream: No such file or directory in %s on line %d
+Warning: readfile(/no/such/file/dir): Failed to open stream: No such file or directory in %s on line %d
 
 -- Filename: php/php --
 
-Warning: readfile(php/php): failed to open stream: No such file or directory in %s on line %d
-===Done===
+Warning: readfile(php/php): Failed to open stream: No such file or directory in %s on line %d

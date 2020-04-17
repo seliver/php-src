@@ -7,9 +7,6 @@ mbstring.language=Japanese
 --FILE--
 <?php
 // TODO: Add more tests
-//$debug = true; // Uncomment this line to view error/warning/notice message in *.out file
-ini_set('include_path', dirname(__FILE__));
-include_once('common.inc');
 
 // SJIS string (BASE64 encoded)
 $sjis = base64_decode('k/qWe4zqg2WDTINYg2eCxYK3gUIwMTIzNIJUglWCVoJXgliBQg==');
@@ -87,13 +84,11 @@ $s = mb_detect_encoding('', 'EUC-JP');
 print("EUC-JP: $s\n");  // SJIS
 
 $s = $euc_jp;
-$s = mb_detect_encoding($s, 'BAD');
-print("BAD: $s\n"); // BAD
-
-$s = $euc_jp;
-$s = mb_detect_encoding();
-print("MP: $s\n"); // Missing parameter
-
+try {
+    var_dump(mb_detect_encoding($s, 'BAD'));
+} catch (\ValueError $e) {
+    echo $e->getMessage() . \PHP_EOL;
+}
 
 ?>
 --EXPECT--
@@ -113,7 +108,4 @@ SJIS: SJIS
 == INVALID PARAMETER ==
 INT: EUC-JP
 EUC-JP: EUC-JP
-ERR: Warning
-BAD: EUC-JP
-ERR: Warning
-MP: 
+mb_detect_encoding(): Argument #2 ($encoding_list) contains invalid encoding "BAD"

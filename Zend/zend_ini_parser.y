@@ -1,9 +1,10 @@
+%require "3.0"
 %{
 /*
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) Zend Technologies Ltd. (http://www.zend.com)           |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -31,9 +32,6 @@
 #include "win32/syslog.h"
 #endif
 
-#define YYERROR_VERBOSE
-#define YYSTYPE zval
-
 int ini_parse(void);
 
 #define ZEND_INI_PARSER_CB	(CG(ini_parser_param))->ini_parser_cb
@@ -46,6 +44,22 @@ int ini_parse(void);
 
 #define ZEND_SYSTEM_INI CG(ini_parser_unbuffered_errors)
 
+static int get_int_val(zval *op) {
+	switch (Z_TYPE_P(op)) {
+		case IS_LONG:
+			return Z_LVAL_P(op);
+		case IS_DOUBLE:
+			return (int)Z_DVAL_P(op);
+		case IS_STRING:
+		{
+			int val = atoi(Z_STRVAL_P(op));
+			zend_string_free(Z_STR_P(op));
+			return val;
+		}
+		EMPTY_SWITCH_DEFAULT_CASE()
+	}
+}
+
 /* {{{ zend_ini_do_op()
 */
 static void zend_ini_do_op(char type, zval *result, zval *op1, zval *op2)
@@ -55,22 +69,8 @@ static void zend_ini_do_op(char type, zval *result, zval *op1, zval *op2)
 	int str_len;
 	char str_result[MAX_LENGTH_OF_LONG+1];
 
-	if (IS_LONG == Z_TYPE_P(op1)) {
-		i_op1 = Z_LVAL_P(op1);
-	} else {
-		i_op1 = atoi(Z_STRVAL_P(op1));
-		zend_string_free(Z_STR_P(op1));
-	}
-	if (op2) {
-		if (IS_LONG == Z_TYPE_P(op2)) {
-			i_op2 = Z_LVAL_P(op2);
-		} else {
-			i_op2 = atoi(Z_STRVAL_P(op2));
-			zend_string_free(Z_STR_P(op2));
-		}
-	} else {
-		i_op2 = 0;
-	}
+	i_op1 = get_int_val(op1);
+	i_op2 = op2 ? get_int_val(op2) : 0;
 
 	switch (type) {
 		case '|':
@@ -93,7 +93,7 @@ static void zend_ini_do_op(char type, zval *result, zval *op1, zval *op2)
 			break;
 	}
 
-	str_len = zend_sprintf(str_result, "%d", i_result);
+	str_len = sprintf(str_result, "%d", i_result);
 	ZVAL_NEW_STR(result, zend_string_init(str_result, str_len, ZEND_SYSTEM_INI));
 }
 /* }}} */
@@ -287,7 +287,10 @@ static void zval_ini_dtor(zval *zv)
 %}
 
 %expect 0
-%pure-parser
+%define api.prefix {ini_}
+%define api.pure full
+%define api.value.type {zval}
+%define parse.error verbose
 
 %token TC_SECTION
 %token TC_RAW
@@ -306,15 +309,15 @@ static void zval_ini_dtor(zval *zv)
 %token END_OF_LINE
 %token '=' ':' ',' '.' '"' '\'' '^' '+' '-' '/' '*' '%' '$' '~' '<' '>' '?' '@' '{' '}'
 %left '|' '&' '^'
-%right '~' '!'
+%precedence '~' '!'
 
-%destructor { zval_ini_dtor(&$$); } TC_RAW TC_CONSTANT TC_NUMBER TC_STRING TC_WHITESPACE TC_LABEL TC_OFFSET TC_VARNAME BOOL_TRUE BOOL_FALSE NULL_NULL
+%destructor { zval_ini_dtor(&$$); } TC_RAW TC_CONSTANT TC_NUMBER TC_STRING TC_WHITESPACE TC_LABEL TC_OFFSET TC_VARNAME BOOL_TRUE BOOL_FALSE NULL_NULL cfg_var_ref constant_literal constant_string encapsed_list expr option_offset section_string_or_value string_or_value var_string_list var_string_list_section
 
 %%
 
 statement_list:
 		statement_list statement
-	|	/* empty */
+	|	%empty
 ;
 
 statement:
@@ -348,7 +351,7 @@ statement:
 
 section_string_or_value:
 		var_string_list_section			{ $$ = $1; }
-	|	/* empty */						{ zend_ini_init_string(&$$); }
+	|	%empty						{ zend_ini_init_string(&$$); }
 ;
 
 string_or_value:
@@ -361,13 +364,13 @@ string_or_value:
 
 option_offset:
 		var_string_list					{ $$ = $1; }
-	|	/* empty */						{ zend_ini_init_string(&$$); }
+	|	%empty						{ zend_ini_init_string(&$$); }
 ;
 
 encapsed_list:
 		encapsed_list cfg_var_ref		{ zend_ini_add_string(&$$, &$1, &$2); zend_string_free(Z_STR($2)); }
 	|	encapsed_list TC_QUOTED_STRING	{ zend_ini_add_string(&$$, &$1, &$2); zend_string_free(Z_STR($2)); }
-	|	/* empty */						{ zend_ini_init_string(&$$); }
+	|	%empty						{ zend_ini_init_string(&$$); }
 ;
 
 var_string_list_section:
@@ -417,13 +420,3 @@ constant_string:
 	|	TC_STRING						{ $$ = $1; /*printf("TC_STRING: '%s'\n", Z_STRVAL($1));*/ }
 	|	TC_WHITESPACE					{ $$ = $1; /*printf("TC_WHITESPACE: '%s'\n", Z_STRVAL($1));*/ }
 ;
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

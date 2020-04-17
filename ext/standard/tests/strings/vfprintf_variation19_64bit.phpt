@@ -46,7 +46,7 @@ $args_array = array(
 
 
 /* creating dumping file */
-$data_file = dirname(__FILE__) . '/vfprintf_variation19_64bit.txt';
+$data_file = __DIR__ . '/vfprintf_variation19_64bit.txt';
 if (!($fp = fopen($data_file, 'wt')))
    return;
 
@@ -65,7 +65,6 @@ echo "\n";
 
 unlink($data_file);
 ?>
-===DONE===
 --EXPECT--
 *** Testing vfprintf() : with  white spaces in format strings ***
 
@@ -91,4 +90,3 @@ A  B  C
 11  FFFFFFFFFFFFFFDE  33
 -- Iteration 11 --
 2.000000E+1  2.000000E-1  -2.000000E+1
-===DONE===

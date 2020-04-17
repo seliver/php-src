@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -91,7 +89,7 @@ MYSQLND_METHOD(mysqlnd_result_buffered_c, initialize_result_set_rest)(MYSQLND_RE
 																	  MYSQLND_STATS * stats,
 																	  const zend_bool int_and_float_native)
 {
-	unsigned int i;
+	unsigned int row, field;
 	enum_func_status ret = PASS;
 	const unsigned int field_count = meta->field_count;
 	const uint64_t row_count = result->row_count;
@@ -106,33 +104,33 @@ MYSQLND_METHOD(mysqlnd_result_buffered_c, initialize_result_set_rest)(MYSQLND_RE
 			DBG_RETURN(FAIL);
 		}
 
-		for (i = 0; i < result->row_count; i++) {
-			/* (i / 8) & the_bit_for_i*/
-			if (ZEND_BIT_TEST(initialized, i)) {
+		for (row = 0; row < result->row_count; row++) {
+			/* (row / 8) & the_bit_for_row*/
+			if (ZEND_BIT_TEST(initialized, row)) {
 				continue;
 			}
 
-			rc = result->m.row_decoder(&result->row_buffers[i], current_row, field_count, meta->fields, int_and_float_native, stats);
+			rc = result->m.row_decoder(&result->row_buffers[row], current_row, field_count, meta->fields, int_and_float_native, stats);
 
 			if (rc != PASS) {
 				ret = FAIL;
 				break;
 			}
 			result->initialized_rows++;
-			initialized[i >> 3] |= (1 << (i & 7));
-			for (i = 0; i < field_count; i++) {
+			initialized[row >> 3] |= (1 << (row & 7));
+			for (field = 0; field < field_count; field++) {
 				/*
 				  NULL fields are 0 length, 0 is not more than 0
 				  String of zero size, definitely can't be the next max_length.
 				  Thus for NULL and zero-length we are quite efficient.
 				*/
-				if (Z_TYPE(current_row[i]) == IS_STRING) {
-					const size_t len = Z_STRLEN(current_row[i]);
-					if (meta->fields[i].max_length < len) {
-						meta->fields[i].max_length = len;
+				if (Z_TYPE(current_row[field]) == IS_STRING) {
+					const size_t len = Z_STRLEN(current_row[field]);
+					if (meta->fields[field].max_length < len) {
+						meta->fields[field].max_length = len;
 					}
 				}
-				zval_ptr_dtor_nogc(&current_row[i]);
+				zval_ptr_dtor_nogc(&current_row[field]);
 			}
 		}
 		mnd_efree(current_row);
@@ -190,8 +188,6 @@ MYSQLND_METHOD(mysqlnd_result_unbuffered, free_result)(MYSQLND_RES_UNBUFFERED * 
 		result->row_packet = NULL;
 	}
 
-	mysqlnd_mempool_restore_state(result->result_set_memory_pool);
-
 	DBG_VOID_RETURN;
 }
 /* }}} */
@@ -246,7 +242,7 @@ MYSQLND_METHOD(mysqlnd_result_buffered, free_result)(MYSQLND_RES_BUFFERED * cons
 {
 
 	DBG_ENTER("mysqlnd_result_buffered::free_result");
-	DBG_INF_FMT("Freeing "MYSQLND_LLU_SPEC" row(s)", set->row_count);
+	DBG_INF_FMT("Freeing "PRIu64" row(s)", set->row_count);
 
 	mysqlnd_error_info_free_contents(&set->error_info);
 
@@ -261,8 +257,6 @@ MYSQLND_METHOD(mysqlnd_result_buffered, free_result)(MYSQLND_RES_BUFFERED * cons
 		set->row_buffers = NULL;
 	}
 
-	mysqlnd_mempool_restore_state(set->result_set_memory_pool);
-
 	DBG_VOID_RETURN;
 }
 /* }}} */
@@ -275,6 +269,12 @@ MYSQLND_METHOD(mysqlnd_res, free_result_buffers)(MYSQLND_RES * result)
 	DBG_ENTER("mysqlnd_res::free_result_buffers");
 	DBG_INF_FMT("%s", result->unbuf? "unbuffered":(result->stored_data? "buffered":"unknown"));
 
+	if (result->meta) {
+		ZEND_ASSERT(zend_arena_contains(result->memory_pool->arena, result->meta));
+		result->meta->m->free_metadata(result->meta);
+		result->meta = NULL;
+	}
+
 	if (result->unbuf) {
 		result->unbuf->m.free_result(result->unbuf, result->conn? result->conn->stats : NULL);
 		result->unbuf = NULL;
@@ -282,6 +282,9 @@ MYSQLND_METHOD(mysqlnd_res, free_result_buffers)(MYSQLND_RES * result)
 		result->stored_data->m.free_result(result->stored_data);
 		result->stored_data = NULL;
 	}
+
+	mysqlnd_mempool_restore_state(result->memory_pool);
+	mysqlnd_mempool_save_state(result->memory_pool);
 
 	DBG_VOID_RETURN;
 }
@@ -296,10 +299,12 @@ void MYSQLND_METHOD(mysqlnd_res, free_result_contents_internal)(MYSQLND_RES * re
 
 	result->m.free_result_buffers(result);
 
-	if (result->meta) {
-		result->meta->m->free_metadata(result->meta);
-		result->meta = NULL;
+	if (result->conn) {
+		result->conn->m->free_reference(result->conn);
+		result->conn = NULL;
 	}
+
+	mysqlnd_mempool_destroy(result->memory_pool);
 
 	DBG_VOID_RETURN;
 }
@@ -311,16 +316,9 @@ static
 void MYSQLND_METHOD(mysqlnd_res, free_result_internal)(MYSQLND_RES * result)
 {
 	DBG_ENTER("mysqlnd_res::free_result_internal");
+
 	result->m.skip_result(result);
-
 	result->m.free_result_contents(result);
-
-	if (result->conn) {
-		result->conn->m->free_reference(result->conn);
-		result->conn = NULL;
-	}
-
-	mysqlnd_mempool_destroy(result->memory_pool);
 
 	DBG_VOID_RETURN;
 }
@@ -354,7 +352,8 @@ MYSQLND_METHOD(mysqlnd_res, read_result_metadata)(MYSQLND_RES * result, MYSQLND_
 
 	/* It's safe to reread without freeing */
 	if (FAIL == result->meta->m->read_metadata(result->meta, conn, result)) {
-		result->m.free_result_contents(result);
+		result->meta->m->free_metadata(result->meta);
+		result->meta = NULL;
 		DBG_RETURN(FAIL);
 	}
 	/* COM_FIELD_LIST is broken and has premature EOF, thus we need to hack here and in mysqlnd_res_meta.c */
@@ -390,7 +389,9 @@ mysqlnd_query_read_result_set_header(MYSQLND_CONN_DATA * conn, MYSQLND_STMT * s)
 		UPSERT_STATUS_SET_AFFECTED_ROWS_TO_ERROR(conn->upsert_status);
 
 		if (FAIL == (ret = PACKET_READ(conn, &rset_header))) {
-			php_error_docref(NULL, E_WARNING, "Error reading result set's header");
+			if (conn->error_info->error_no != CR_SERVER_GONE_ERROR) {
+				php_error_docref(NULL, E_WARNING, "Error reading result set's header");
+			}
 			break;
 		}
 
@@ -514,7 +515,6 @@ mysqlnd_query_read_result_set_header(MYSQLND_CONN_DATA * conn, MYSQLND_STMT * s)
 				if (FAIL == (ret = PACKET_READ(conn, &fields_eof))) {
 					DBG_ERR("Error occurred while reading the EOF packet");
 					result->m.free_result_contents(result);
-					mysqlnd_mempool_destroy(result->memory_pool);
 					if (!stmt) {
 						conn->current_result = NULL;
 					} else {
@@ -781,6 +781,7 @@ MYSQLND_METHOD(mysqlnd_result_unbuffered, fetch_row)(MYSQLND_RES * result, void 
 	MYSQLND_PACKET_ROW	*row_packet = result->unbuf->row_packet;
 	const MYSQLND_RES_METADATA * const meta = result->meta;
 	MYSQLND_CONN_DATA * const conn = result->conn;
+	void *checkpoint;
 
 	DBG_ENTER("mysqlnd_result_unbuffered::fetch_row");
 
@@ -799,6 +800,9 @@ MYSQLND_METHOD(mysqlnd_result_unbuffered, fetch_row)(MYSQLND_RES * result, void 
 	}
 	/* Let the row packet fill our buffer and skip additional mnd_malloc + memcpy */
 	row_packet->skip_extraction = row? FALSE:TRUE;
+
+	checkpoint = result->memory_pool->checkpoint;
+	mysqlnd_mempool_save_state(result->memory_pool);
 
 	/*
 	  If we skip rows (row == NULL) we have to
@@ -824,6 +828,8 @@ MYSQLND_METHOD(mysqlnd_result_unbuffered, fetch_row)(MYSQLND_RES * result, void 
 															   conn->options->int_and_float_native,
 															   conn->stats);
 			if (PASS != rc) {
+				mysqlnd_mempool_restore_state(result->memory_pool);
+				result->memory_pool->checkpoint = checkpoint;
 				DBG_RETURN(FAIL);
 			}
 			{
@@ -836,8 +842,9 @@ MYSQLND_METHOD(mysqlnd_result_unbuffered, fetch_row)(MYSQLND_RES * result, void 
 					const size_t len = (Z_TYPE_P(data) == IS_STRING)? Z_STRLEN_P(data) : 0;
 
 					if (flags & MYSQLND_FETCH_NUM) {
-						Z_TRY_ADDREF_P(data);
-						zend_hash_next_index_insert(row_ht, data);
+						if (zend_hash_index_add(row_ht, i, data) != NULL) {
+							Z_TRY_ADDREF_P(data);
+						}
 					}
 					if (flags & MYSQLND_FETCH_ASSOC) {
 						/* zend_hash_quick_update needs length + trailing zero */
@@ -893,6 +900,9 @@ MYSQLND_METHOD(mysqlnd_result_unbuffered, fetch_row)(MYSQLND_RES * result, void 
 		}
 		result->unbuf->m.free_last_data(result->unbuf, conn->stats);
 	}
+
+	mysqlnd_mempool_restore_state(result->memory_pool);
+	result->memory_pool->checkpoint = checkpoint;
 
 	DBG_INF_FMT("ret=%s fetched=%u", ret == PASS? "PASS":"FAIL", *fetched_anything);
 	DBG_RETURN(PASS);
@@ -1090,8 +1100,9 @@ MYSQLND_METHOD(mysqlnd_result_buffered_zval, fetch_row)(MYSQLND_RES * result, vo
 			set->lengths[i] = (Z_TYPE_P(data) == IS_STRING)? Z_STRLEN_P(data) : 0;
 
 			if (flags & MYSQLND_FETCH_NUM) {
-				Z_TRY_ADDREF_P(data);
-				zend_hash_next_index_insert(Z_ARRVAL_P(row), data);
+				if (zend_hash_index_add(Z_ARRVAL_P(row), i, data) != NULL) {
+					Z_TRY_ADDREF_P(data);
+				}
 			}
 			if (flags & MYSQLND_FETCH_ASSOC) {
 				/* zend_hash_quick_update needs length + trailing zero */
@@ -1186,8 +1197,9 @@ MYSQLND_METHOD(mysqlnd_result_buffered_c, fetch_row)(MYSQLND_RES * result, void 
 			set->lengths[i] = (Z_TYPE_P(data) == IS_STRING)? Z_STRLEN_P(data) : 0;
 
 			if (flags & MYSQLND_FETCH_NUM) {
-				Z_TRY_ADDREF_P(data);
-				zend_hash_next_index_insert(Z_ARRVAL_P(row), data);
+				if (zend_hash_index_add(Z_ARRVAL_P(row), i, data)) {
+					Z_TRY_ADDREF_P(data);
+				}
 			}
 			if (flags & MYSQLND_FETCH_ASSOC) {
 				/* zend_hash_quick_update needs length + trailing zero */
@@ -1869,7 +1881,12 @@ MYSQLND_CLASS_METHODS_START(mysqlnd_res)
 	MYSQLND_METHOD(mysqlnd_res, free_result),
 	MYSQLND_METHOD(mysqlnd_res, free_result_internal),
 	MYSQLND_METHOD(mysqlnd_res, free_result_contents_internal),
-	mysqlnd_result_meta_init
+	mysqlnd_result_meta_init,
+	NULL, /* unused1 */
+	NULL, /* unused2 */
+	NULL, /* unused3 */
+	NULL, /* unused4 */
+	NULL  /* unused5 */
 MYSQLND_CLASS_METHODS_END;
 
 
@@ -1916,6 +1933,8 @@ mysqlnd_result_init(const unsigned int field_count)
 	ret->field_count	= field_count;
 	ret->m = *mysqlnd_result_get_methods();
 
+	mysqlnd_mempool_save_state(pool);
+
 	DBG_RETURN(ret);
 }
 /* }}} */
@@ -1931,7 +1950,6 @@ mysqlnd_result_unbuffered_init(MYSQLND_RES *result, const unsigned int field_cou
 
 	DBG_ENTER("mysqlnd_result_unbuffered_init");
 
-	mysqlnd_mempool_save_state(pool);
 	ret = pool->get_chunk(pool, alloc_size);
 	memset(ret, 0, alloc_size);
 
@@ -1966,12 +1984,10 @@ mysqlnd_result_buffered_zval_init(MYSQLND_RES * result, const unsigned int field
 
 	DBG_ENTER("mysqlnd_result_buffered_zval_init");
 
-	mysqlnd_mempool_save_state(pool);
 	ret = pool->get_chunk(pool, alloc_size);
 	memset(ret, 0, alloc_size);
 
 	if (FAIL == mysqlnd_error_info_init(&ret->error_info, 0)) {
-		mysqlnd_mempool_restore_state(pool);
 		DBG_RETURN(NULL);
 	}
 
@@ -2009,12 +2025,10 @@ mysqlnd_result_buffered_c_init(MYSQLND_RES * result, const unsigned int field_co
 
 	DBG_ENTER("mysqlnd_result_buffered_c_init");
 
-	mysqlnd_mempool_save_state(pool);
 	ret = pool->get_chunk(pool, alloc_size);
 	memset(ret, 0, alloc_size);
 
 	if (FAIL == mysqlnd_error_info_init(&ret->error_info, 0)) {
-		mysqlnd_mempool_restore_state(pool);
 		DBG_RETURN(NULL);
 	}
 
@@ -2041,13 +2055,3 @@ mysqlnd_result_buffered_c_init(MYSQLND_RES * result, const unsigned int field_co
 	DBG_RETURN(ret);
 }
 /* }}} */
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

@@ -9,11 +9,10 @@ GetImageSize() for wbmp format
  */
 
 echo "*** Testing getimagesize() : wbmp format ***\n";
-var_dump(getimagesize(dirname(__FILE__) . "/75x50.wbmp", $arr));
+var_dump(getimagesize(__DIR__ . "/75x50.wbmp", $arr));
 var_dump($arr);
 
 ?>
-===DONE===
 --EXPECT--
 *** Testing getimagesize() : wbmp format ***
 array(5) {
@@ -30,4 +29,3 @@ array(5) {
 }
 array(0) {
 }
-===DONE===

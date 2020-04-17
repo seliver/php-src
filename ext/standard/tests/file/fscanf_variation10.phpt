@@ -10,7 +10,7 @@ Test fscanf() function: usage variations - float formats with resource
 
 /* Test fscanf() to scan resource type using different float format types */
 
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 
 echo "*** Test fscanf(): different float format types with resource ***\n";
 
@@ -23,7 +23,7 @@ if($file_handle == false)
 
 // resource type variable
 $fp = fopen (__FILE__, "r");
-$dfp = opendir ( dirname(__FILE__) );
+$dfp = opendir ( __DIR__ );
 
 // array of resource types
 $resource_types = array (
@@ -42,7 +42,7 @@ $counter = 1;
 
 // writing to the file
 foreach($resource_types as $value) {
-  @fprintf($file_handle, $value);
+  @fprintf($file_handle, "%s", $value);
   @fprintf($file_handle, "\n");
 }
 // closing the file
@@ -61,7 +61,11 @@ foreach($float_formats as $float_format) {
   rewind($file_handle);
   echo "\n-- iteration $counter --\n";
   while( !feof($file_handle) ) {
-    var_dump( fscanf($file_handle,$float_format) );
+    try {
+      var_dump( fscanf($file_handle,$float_format) );
+    } catch (ValueError $exception) {
+      echo $exception->getMessage() . "\n";
+    }
   }
   $counter++;
 }
@@ -74,7 +78,7 @@ echo "\n*** Done ***";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 $filename = "$file_path/fscanf_variation10.tmp";
 unlink($filename);
 ?>
@@ -148,12 +152,8 @@ array(1) {
 bool(false)
 
 -- iteration 7 --
-
-Warning: fscanf(): Bad scan conversion character " " in %s on line %d
-NULL
-
-Warning: fscanf(): Bad scan conversion character " " in %s on line %d
-NULL
+Bad scan conversion character " "
+Bad scan conversion character " "
 bool(false)
 
 -- iteration 8 --

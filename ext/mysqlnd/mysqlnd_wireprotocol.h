@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -288,6 +286,15 @@ typedef struct st_mysqlnd_packet_cached_sha2_result {
 	uint8_t 	request;
 	zend_uchar * password;
 	size_t password_len;
+	/* Used for auth switch request */
+	char		*new_auth_protocol;
+	size_t		new_auth_protocol_len;
+	zend_uchar	*new_auth_protocol_data;
+	size_t		new_auth_protocol_data_len;
+	/* Used for error result */
+	char 		error[MYSQLND_ERRMSG_SIZE+1];
+	char 		sqlstate[MYSQLND_SQLSTATE_LENGTH + 1];
+	unsigned int 	error_no;
 } MYSQLND_PACKET_CACHED_SHA2_RESULT;
 
 
@@ -316,12 +323,3 @@ PHPAPI MYSQLND_PROTOCOL_PAYLOAD_DECODER_FACTORY * mysqlnd_protocol_payload_decod
 PHPAPI void mysqlnd_protocol_payload_decoder_factory_free(MYSQLND_PROTOCOL_PAYLOAD_DECODER_FACTORY * const payload_decoder_factory);
 
 #endif /* MYSQLND_WIREPROTOCOL_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

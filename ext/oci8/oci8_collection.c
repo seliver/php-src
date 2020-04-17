@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -197,7 +195,7 @@ php_oci_collection *php_oci_collection_create(php_oci_connection *connection, ch
 			break;
 			/* we only support VARRAYs and TABLEs */
 		default:
-			php_error_docref(NULL, E_WARNING, "unknown collection type %d", collection->coll_typecode);
+			php_error_docref(NULL, E_WARNING, "Unknown collection type %d", collection->coll_typecode);
 			break;
 	}
 
@@ -810,12 +808,3 @@ void php_oci_collection_close(php_oci_collection *collection)
 /* }}} */
 
 #endif /* HAVE_OCI8 */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

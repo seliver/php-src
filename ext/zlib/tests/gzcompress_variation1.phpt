@@ -14,7 +14,7 @@ if (!extension_loaded("zlib")) {
  * Alias to functions:
  */
 
-include(dirname(__FILE__) . '/data.inc');
+include(__DIR__ . '/data.inc');
 
 echo "*** Testing gzcompress() : variation ***\n";
 
@@ -24,11 +24,9 @@ var_dump( md5($output));
 var_dump(md5(gzcompress($output)));
 
 ?>
-===Done===
 --EXPECT--
 *** Testing gzcompress() : variation ***
 
 -- Testing multiple compression --
 string(32) "764809aef15bb34cb73ad49ecb600d99"
 string(32) "eba942bc2061f23ea8688cc5101872a4"
-===Done===

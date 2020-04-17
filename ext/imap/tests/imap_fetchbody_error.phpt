@@ -2,7 +2,7 @@
 Test imap_fetchbody() function : error conditions - incorrect number of args
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -17,7 +17,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
  */
 
 echo "*** Testing imap_fetchbody() : error conditions ***\n";
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 //Test imap_fetchbody with one more than the expected number of arguments
 echo "\n-- Testing imap_fetchbody() function with more than expected no. of arguments --\n";
@@ -35,10 +35,9 @@ echo "\n-- Testing imap_fetchbody() function with less than expected no. of argu
 
 var_dump( imap_fetchbody($stream_id, $msg_no) );
 ?>
-===DONE===
 --CLEAN--
 <?php
-require_once(dirname(__FILE__).'/clean.inc');
+require_once(__DIR__.'/clean.inc');
 ?>
 --EXPECTF--
 *** Testing imap_fetchbody() : error conditions ***
@@ -54,4 +53,3 @@ NULL
 
 Warning: imap_fetchbody() expects at least 3 parameters, 2 given in %s on line %d
 NULL
-===DONE===

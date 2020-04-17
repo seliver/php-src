@@ -2,7 +2,7 @@
 Test imap_fetchheader() function : usage variations - FT_UID option
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -19,7 +19,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
 
 echo "*** Testing imap_fetchheader() : usage variations ***\n";
 
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 // Initialise required variables
 $stream_id = setup_test_mailbox('', 1); // set up temporary mailbox with one simple message
@@ -34,19 +34,18 @@ $options = array ('1', true,
 $iterator = 1;
 imap_check($stream_id);
 foreach($options as $option) {
-	echo "\n-- Iteration $iterator --\n";
-	if(is_string(imap_fetchheader($stream_id, $msg_uid, $option))) {
-		echo "FT_UID valid\n";
-	} else {
+    echo "\n-- Iteration $iterator --\n";
+    if(is_string(imap_fetchheader($stream_id, $msg_uid, $option))) {
+        echo "FT_UID valid\n";
+    } else {
                 echo "FT_UID not valid\n";
         }
-	$iterator++;
+    $iterator++;
 }
 ?>
-===DONE===
 --CLEAN--
 <?php
-require_once(dirname(__FILE__).'/clean.inc');
+require_once(__DIR__.'/clean.inc');
 ?>
 --EXPECTF--
 *** Testing imap_fetchheader() : usage variations ***
@@ -67,11 +66,10 @@ FT_UID valid
 
 -- Iteration 5 --
 
-Warning: imap_fetchheader(): invalid value for the options parameter in %s on line %d
+Warning: imap_fetchheader(): Invalid value for the options parameter in %s on line %d
 FT_UID not valid
 
 -- Iteration 6 --
 
-Warning: imap_fetchheader(): invalid value for the options parameter in %s on line %d
+Warning: imap_fetchheader(): Invalid value for the options parameter in %s on line %d
 FT_UID not valid
-===DONE===

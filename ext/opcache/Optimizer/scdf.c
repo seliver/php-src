@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine, Sparse Conditional Data Flow Propagation Framework      |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -158,7 +158,7 @@ void scdf_solve(scdf_ctx *scdf, const char *name) {
 				/* Zero length blocks don't have a last instruction that would normally do this */
 				scdf_mark_edge_feasible(scdf, i, block->successors[0]);
 			} else {
-				zend_op *opline;
+				zend_op *opline = NULL;
 				int j, end = block->start + block->len;
 				for (j = block->start; j < end; j++) {
 					opline = &scdf->op_array->opcodes[j];
@@ -170,6 +170,7 @@ void scdf_solve(scdf_ctx *scdf, const char *name) {
 				if (block->successors_count == 1) {
 					scdf_mark_edge_feasible(scdf, i, block->successors[0]);
 				} else if (block->successors_count > 1) {
+					ZEND_ASSERT(opline && "Should have opline in non-empty block");
 					if (opline->opcode == ZEND_OP_DATA) {
 						opline--;
 						j--;
@@ -189,10 +190,12 @@ static zend_bool kept_alive_by_loop_var_free(scdf_ctx *scdf, uint32_t block_idx)
 	const zend_op_array *op_array = scdf->op_array;
 	const zend_cfg *cfg = &scdf->ssa->cfg;
 	const zend_basic_block *block = &cfg->blocks[block_idx];
+	if (!(cfg->flags & ZEND_FUNC_FREE_LOOP_VAR)) {
+		return 0;
+	}
 	for (i = block->start; i < block->start + block->len; i++) {
 		zend_op *opline = &op_array->opcodes[i];
-		if (opline->opcode == ZEND_FE_FREE ||
-				(opline->opcode == ZEND_FREE && opline->extended_value == ZEND_FREE_SWITCH)) {
+		if (zend_optimizer_is_loop_var_free(opline)) {
 			int ssa_var = scdf->ssa->ops[i].op1_use;
 			if (ssa_var >= 0) {
 				int op_num = scdf->ssa->vars[ssa_var].definition;
@@ -215,10 +218,6 @@ int scdf_remove_unreachable_blocks(scdf_ctx *scdf) {
 	zend_ssa *ssa = scdf->ssa;
 	int i;
 	int removed_ops = 0;
-
-	if (!(ssa->cfg.flags & ZEND_FUNC_FREE_LOOP_VAR)) {
-		return 0;
-	}
 	for (i = 0; i < ssa->cfg.blocks_count; i++) {
 		if (!zend_bitset_in(scdf->executable_blocks, i)
 				&& (ssa->cfg.blocks[i].flags & ZEND_BB_REACHABLE)

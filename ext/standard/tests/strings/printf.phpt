@@ -28,14 +28,22 @@ $strings          = array( NULL, "abc", 'aaa' );
 
 /* Zero argument */
 echo "\n*** Output for zero argument ***\n";
-printf();
+try {
+    printf();
+} catch (TypeError $e) {
+    echo $e->getMessage(), "\n";
+}
 
 /* Number of arguments not matching as specified in format field */
 echo "\n*** Output for insufficient number of arguments ***\n";
 $string = "dingy%sflem%dwombat";
 $nbr = 5;
 $name = "voudras";
-printf("%d $string %s", $nbr, $name);
+try {
+    printf("%d $string %s", $nbr, $name);
+} catch (\ArgumentCountError $e) {
+    print('Error found: '.$e->getMessage());
+}
 
 
 /* Scalar argument */
@@ -226,13 +234,10 @@ printf("%d", $tempstring);
 ?>
 --EXPECTF--
 *** Output for zero argument ***
-
-Warning: printf() expects at least %d parameter, %d given in %s on line %d
+printf() expects at least %d parameter, %d given
 
 *** Output for insufficient number of arguments ***
-
-Warning: printf(): Too few arguments in %s on line %d
-
+Error found: 5 parameters are required, 3 given
 *** Output for scalar argument ***
 3
 *** Output for NULL as argument ***

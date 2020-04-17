@@ -15,7 +15,7 @@ try {
 <?php
 
 $text= "Xin chào cộng đồng PHP";
-$fpath = str_replace("/", "\\", dirname(__FILE__) . "/bug66431.docx");
+$fpath = str_replace("/", "\\", __DIR__ . "/bug66431.docx");
 
 com_load_typelib('Word.Application');
 
@@ -40,16 +40,15 @@ $result = (trim($check_text) == $text);
 var_dump($result);
 
 if (!$result) {
-	echo "Expected: '$check_text'\n";
-	echo "Have: '$text'\n";
+    echo "Expected: '$check_text'\n";
+    echo "Have: '$text'\n";
 }
 
 ?>
-===DONE===
 --CLEAN--
 <?php
 
-$fpath = str_replace("/", "\\", dirname(__FILE__) . "/bug66431.docx");
+$fpath = str_replace("/", "\\", __DIR__ . "/bug66431.docx");
 
 if (file_exists($fpath)) {
 	unlink($fpath);
@@ -57,4 +56,3 @@ if (file_exists($fpath)) {
 ?>
 --EXPECT--
 bool(true)
-===DONE===

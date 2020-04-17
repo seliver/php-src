@@ -18,7 +18,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 
 /* use stat on file created using "w" and "r" mode of fopen */
 
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 require "$file_path/file.inc";
 
 
@@ -30,7 +30,7 @@ fclose($file_handle);
 $old_stat = stat($filename);
 // clear the stat
 clearstatcache();
-sleep(2);
+sleep(1);
 // opening file again in read mode
 $file_handle = fopen($filename, "r");  // read file
 fclose($file_handle);
@@ -45,7 +45,7 @@ echo "\n--- Done ---";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 unlink("$file_path/lstat_stat_variation13.tmp");
 ?>
 --EXPECT--

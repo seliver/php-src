@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -33,6 +31,18 @@
 # define INADDR_NONE ((unsigned long int) -1)
 #endif
 
+
+/* {{{ FETCH_DOUBLE_OPTION(var_name, option_name) */
+#define FETCH_DOUBLE_OPTION(var_name, option_name) \
+   	var_name = 0; \
+	var_name##_set = 0; \
+	if (option_array) { \
+		if ((option_val = zend_hash_str_find(Z_ARRVAL_P(option_array), option_name, sizeof(option_name) - 1)) != NULL) {	\
+			var_name = zval_get_double(option_val); \
+			var_name##_set = 1; \
+		} \
+	}
+/* }}} */
 
 /* {{{ FETCH_LONG_OPTION(var_name, option_name) */
 #define FETCH_LONG_OPTION(var_name, option_name) \
@@ -335,6 +345,8 @@ void php_filter_float(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 
 	zend_long lval;
 	double dval;
+	double min_range, max_range;
+	int   min_range_set, max_range_set;
 
 	int first, n;
 
@@ -348,7 +360,7 @@ void php_filter_float(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 
 	if (decimal_set) {
 		if (decimal_len != 1) {
-			php_error_docref(NULL, E_WARNING, "decimal separator must be one char");
+			php_error_docref(NULL, E_WARNING, "Decimal separator must be one char");
 			RETURN_VALIDATION_FAILED
 		} else {
 			dec_sep = *decimal;
@@ -359,7 +371,7 @@ void php_filter_float(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 
 	if (thousand_set) {
 		if (thousand_len < 1) {
-			php_error_docref(NULL, E_WARNING, "thousand separator must be at least one char");
+			php_error_docref(NULL, E_WARNING, "Thousand separator must be at least one char");
 			RETURN_VALIDATION_FAILED
 		} else {
 			tsd_sep = thousand;
@@ -367,6 +379,9 @@ void php_filter_float(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 	} else {
 		tsd_sep = "',.";
 	}
+
+	FETCH_DOUBLE_OPTION(min_range, "min_range");
+	FETCH_DOUBLE_OPTION(max_range, "max_range");
 
 	num = p = emalloc(len+1);
 	if (str < end && (*str == '+' || *str == '-')) {
@@ -419,10 +434,16 @@ void php_filter_float(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 	switch (is_numeric_string(num, p - num, &lval, &dval, 0)) {
 		case IS_LONG:
 			zval_ptr_dtor(value);
+			if ((min_range_set && (lval < min_range)) || (max_range_set && (lval > max_range))) {
+				goto error;
+			}
 			ZVAL_DOUBLE(value, (double)lval);
 			break;
 		case IS_DOUBLE:
 			if ((!dval && p - num > 1 && strpbrk(num, "123456789")) || !zend_finite(dval)) {
+				goto error;
+			}
+			if ((min_range_set && (dval < min_range)) || (max_range_set && (dval > max_range))) {
 				goto error;
 			}
 			zval_ptr_dtor(value);
@@ -536,11 +557,6 @@ void php_filter_validate_url(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 {
 	php_url *url;
 	size_t old_len = Z_STRLEN_P(value);
-
-	if (flags & (FILTER_FLAG_SCHEME_REQUIRED | FILTER_FLAG_HOST_REQUIRED)) {
-		php_error_docref(NULL, E_DEPRECATED,
-			"explicit use of FILTER_FLAG_SCHEME_REQUIRED and FILTER_FLAG_HOST_REQUIRED is deprecated");
-	}
 
 	php_filter_url(value, flags, option_array, charset);
 
@@ -950,12 +966,3 @@ void php_filter_validate_mac(PHP_INPUT_FILTER_PARAM_DECL) /* {{{ */
 	}
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -315,7 +313,7 @@ static int convert_case_filter(int c, void *void_data)
 
 	/* Handle invalid characters early, as we assign special meaning to
 	 * codepoints above 0xffffff. */
-	if (UNEXPECTED(c > 0xffffff)) {
+	if (UNEXPECTED((unsigned) c > 0xffffff)) {
 		(*data->next_filter->filter_function)(c, data->next_filter);
 		return 0;
 	}
@@ -371,9 +369,7 @@ static int convert_case_filter(int c, void *void_data)
 			}
 			break;
 		}
-		default:
-			assert(0);
-			break;
+		EMPTY_SWITCH_DEFAULT_CASE()
 	}
 
 	for (i = 0; i < len; i++) {
@@ -449,12 +445,3 @@ MBSTRING_API char *php_unicode_convert_case(
 
 
 #endif /* HAVE_MBSTRING */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

@@ -8,7 +8,7 @@ if (!extension_loaded("zlib")) {
 ?>
 --FILE--
 <?php
-$f = dirname(__FILE__)."/004.txt.gz";
+$f = __DIR__."/004.txt.gz";
 $h = gzopen($f, 'r');
 
 echo "move to the 50th byte\n";
@@ -30,7 +30,6 @@ echo "tell=".gztell($h)."\n";
 var_dump(gzread($h, 10));
 gzclose($h);
 ?>
-===DONE===
 --EXPECT--
 move to the 50th byte
 int(0)
@@ -46,4 +45,3 @@ move backward to the 20th byte
 int(0)
 tell=20
 string(10) "hrough fee"
-===DONE===

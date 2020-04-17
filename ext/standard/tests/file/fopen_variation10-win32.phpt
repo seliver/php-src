@@ -23,7 +23,7 @@ if (!is_writable('c:\\fopen_variation10.tmp')) {
 echo "*** Testing fopen() : variation ***\n";
 
 // fopen with interesting windows paths.
-$testdir = dirname(__FILE__).'/fopen10.tmpDir';
+$testdir = __DIR__.'/fopen10.tmpDir';
 $rootdir = 'fopen10.tmpdirTwo';
 mkdir($testdir);
 mkdir('c:\\'.$rootdir);
@@ -83,7 +83,6 @@ rmdir('c:\\'.$rootdir);
 
 
 ?>
-===DONE===
 --EXPECTF--
 *** Testing fopen() : variation ***
 
@@ -95,34 +94,34 @@ file in root
 
 --c--
 
-Warning: fopen(c\fopen_variation10.tmp): failed to open stream: No such file or directory in %s on line %d
+Warning: fopen(c\fopen_variation10.tmp): Failed to open stream: No such file or directory in %s on line %d
 file not opened for read
 
-Warning: fclose() expects parameter 1 to be resource, bool given in %s on line %d
+Warning: fclose(): Argument #1 must be of type resource, bool given in %s on line %d
 
 --\--
 
-Warning: fopen(\\fopen_variation10.tmp): failed to open stream: Invalid argument in %s on line %d
+Warning: fopen(\\fopen_variation10.tmp): Failed to open stream: Invalid argument in %s on line %d
 file not opened for read
 
-Warning: fclose() expects parameter 1 to be resource, bool given in %s on line %d
+Warning: fclose(): Argument #1 must be of type resource, bool given in %s on line %d
 
 --/--
 
-Warning: fopen(/\fopen_variation10.tmp): failed to open stream: Invalid argument in %s on line %d
+Warning: fopen(/\fopen_variation10.tmp): Failed to open stream: Invalid argument in %s on line %d
 file not opened for read
 
-Warning: fclose() expects parameter 1 to be resource, bool given in %s on line %d
+Warning: fclose(): Argument #1 must be of type resource, bool given in %s on line %d
 
 --c:fopen10.tmpdirTwo--
 file in fopen10.tmpdirTwo
 
 --c:adir--
 
-Warning: fopen(c:adir\fopen_variation10.tmp): failed to open stream: No such file or directory in %s on line %d
+Warning: fopen(c:adir\fopen_variation10.tmp): Failed to open stream: No such file or directory in %s on line %d
 file not opened for read
 
-Warning: fclose() expects parameter 1 to be resource, bool given in %s on line %d
+Warning: fclose(): Argument #1 must be of type resource, bool given in %s on line %d
 
 --c:\/--
 file in root
@@ -141,8 +140,7 @@ file in fopen10.tmpDir
 
 --/sortout--
 
-Warning: fopen(/sortout\fopen_variation10.tmp): failed to open stream: No such file or directory in %s on line %d
+Warning: fopen(/sortout\fopen_variation10.tmp): Failed to open stream: No such file or directory in %s on line %d
 file not opened for read
 
-Warning: fclose() expects parameter 1 to be resource, bool given in %s on line %d
-===DONE===
+Warning: fclose(): Argument #1 must be of type resource, bool given in %s on line %d

@@ -11,7 +11,7 @@ echo "*** Testing sprintf() : scientific formats with resource values ***\n";
 
 // resource type variable
 $fp = fopen (__FILE__, "r");
-$dfp = opendir ( dirname(__FILE__) );
+$dfp = opendir ( __DIR__ );
 
 // array of resource types
 $resource_values = array (
@@ -42,7 +42,6 @@ fclose($fp);
 closedir($dfp);
 
 ?>
-===DONE===
 --EXPECTF--
 *** Testing sprintf() : scientific formats with resource values ***
 
@@ -75,4 +74,3 @@ string(%d) "%f"
 string(30) "%s%f"
 string(%d) "0-1]"
 string(1) "e"
-===DONE===

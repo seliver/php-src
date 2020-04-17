@@ -5,6 +5,8 @@ Test disk_total_space() function : error conditions
 if(substr(PHP_OS, 0, 3) == 'WIN')
   die("skip Not valid on Windows");
 ?>
+--CONFLICTS--
+disk_total_space
 --FILE--
 <?php
 /*
@@ -15,11 +17,7 @@ if(substr(PHP_OS, 0, 3) == 'WIN')
  */
 
 echo "*** Testing error conditions ***\n";
-$file_path = dirname(__FILE__);
-var_dump( disk_total_space() ); // Zero Arguments
-
-var_dump( disk_total_space( $file_path, "extra argument") ); // More than valid number of arguments
-
+$file_path = __DIR__;
 
 var_dump( disk_total_space( $file_path."/dir1" )); // Invalid directory
 
@@ -32,17 +30,11 @@ echo"\n--- Done ---";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 unlink($file_path."/disk_total_space.tmp");
 ?>
 --EXPECTF--
 *** Testing error conditions ***
-
-Warning: disk_total_space() expects exactly 1 parameter, 0 given in %s on line %d
-NULL
-
-Warning: disk_total_space() expects exactly 1 parameter, 2 given in %s on line %d
-NULL
 
 Warning: disk_total_space(): No such file or directory in %s on line %d
 bool(false)

@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -411,7 +409,8 @@ MYSQLND_METHOD(mysqlnd_command, stmt_execute)(MYSQLND_CONN_DATA * conn, const MY
 
 	DBG_ENTER("mysqlnd_command::stmt_execute");
 
-	ret = send_command(conn->payload_decoder_factory, COM_STMT_EXECUTE, payload.s, payload.l, FALSE,
+	ret = send_command(conn->payload_decoder_factory, COM_STMT_EXECUTE,
+					   (const unsigned char *) payload.s, payload.l, FALSE,
 					   &conn->state,
 					   conn->error_info,
 					   conn->upsert_status,
@@ -704,12 +703,3 @@ MYSQLND_CLASS_METHODS_START(mysqlnd_command)
 	MYSQLND_METHOD(mysqlnd_command, enable_ssl),
 	MYSQLND_METHOD(mysqlnd_command, handshake),
 MYSQLND_CLASS_METHODS_END;
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

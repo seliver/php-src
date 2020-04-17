@@ -20,14 +20,14 @@ if (!extension_loaded("zlib")) {
  */
 
 if(!function_exists("gzdecode")) {
-	function gzdecode($data)
-	{
-	   return gzinflate(substr($data,10,-8));
-	}
+    function gzdecode($data)
+    {
+       return gzinflate(substr($data,10,-8));
+    }
 }
 
 
-include(dirname(__FILE__) . '/data.inc');
+include(__DIR__ . '/data.inc');
 
 echo "*** Testing gzencode() : variation ***\n";
 
@@ -37,10 +37,8 @@ $output = gzencode(gzencode($data));
 $back = gzdecode(gzdecode($output));
 var_dump($data === $back);
 ?>
-===Done===
 --EXPECT--
 *** Testing gzencode() : variation ***
 
 -- Testing multiple compression --
 bool(true)
-===Done===

@@ -25,7 +25,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
                  Check linkinfo() value with lstat['dev']
 */
 // temp file used
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 $dirname = $file_path."/symlink_link_linkinfo_is_link_variation9";
 mkdir($dirname);
 $filename = "$dirname/symlink_link_linkinfo_is_link_variation9.tmp";
@@ -50,7 +50,7 @@ echo "lstat() returns lstat['dev'] as $s1[0]\n";
 if( $s1[0] == $linkinfo )
   echo "\nlinkinfo() value matches lstat['dev']\n";
 else
-  echo "\nWarning: linkinfo() value doesnt match lstat['dev']\n";
+  echo "\nWarning: linkinfo() value doesn't match lstat['dev']\n";
 // delete link
 unlink($soft_link);
 
@@ -65,7 +65,7 @@ echo "lstat() returns lstat['dev'] as $s1[0]\n";
 if( $s1[0] == $linkinfo )
   echo "\nlinkinfo() value matches lstat['dev']\n";
 else
-  echo "\nWarning: linkinfo() value doesnt match lstat['dev']\n";
+  echo "\nWarning: linkinfo() value doesn't match lstat['dev']\n";
 
 // delete link
 unlink($hard_link);
@@ -82,7 +82,7 @@ echo "lstat() returns lstat['dev'] as $s1[0]\n";
 if( $s1[0] == $linkinfo )
   echo "\nlinkinfo() value matches lstat['dev']\n";
 else
-  echo "\nWarning: linkinfo() value doesnt match lstat['dev']\n";
+  echo "\nWarning: linkinfo() value doesn't match lstat['dev']\n";
 
 // delete link
 unlink($soft_link);
@@ -91,7 +91,7 @@ echo "Done\n";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 $dirname = $file_path."/symlink_link_linkinfo_is_link_variation9";
 $filename = "$dirname/symlink_link_linkinfo_is_link_variation9.tmp";
 unlink($filename);

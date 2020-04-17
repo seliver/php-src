@@ -17,7 +17,7 @@ if (substr(PHP_OS, 0, 3) != 'WIN') {
 /* test the effects of truncate() on stats of file */
 
 
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 require "$file_path/file.inc";
 
 
@@ -37,7 +37,7 @@ fclose($file_handle);
 clearstatcache(true, $filename);
 $old_stat = stat($filename);
 // clear the cache
-sleep(2);
+sleep(1);
 
 // opening file in r/w mode
 $file_handle = fopen($filename, "r+");
@@ -62,7 +62,7 @@ echo "\n*** Done ***";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 unlink("$file_path/stat_variation8.tmp");
 ?>
 --EXPECT--

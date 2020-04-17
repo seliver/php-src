@@ -2,7 +2,7 @@
 Test imap_fetchheader() function : usage variations - $msg_no argument
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -18,7 +18,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
 
 echo "*** Testing imap_fetchheader() : usage variations ***\n";
 
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 $stream_id = setup_test_mailbox('', 3, $mailbox, 'notSimple'); // set up temp mailbox with 3 msgs
 
@@ -27,20 +27,19 @@ $sequences = array (0,     4, // out of range
                     );
 
 foreach($sequences as $msg_no) {
-	echo "\n-- \$msg_no is $msg_no --\n";
-	var_dump($overview = imap_fetchheader($stream_id, $msg_no));
-	if (!$overview) {
-		echo imap_last_error() . "\n";
-	}
+    echo "\n-- \$msg_no is $msg_no --\n";
+    var_dump($overview = imap_fetchheader($stream_id, $msg_no));
+    if (!$overview) {
+        echo imap_last_error() . "\n";
+    }
 }
 
 // clear error stack
 imap_errors();
 ?>
-===DONE===
 --CLEAN--
 <?php
-require_once(dirname(__FILE__).'/clean.inc');
+require_once(__DIR__.'/clean.inc');
 ?>
 --EXPECTF--
 *** Testing imap_fetchheader() : usage variations ***
@@ -80,4 +79,3 @@ MIME-Version: 1.0
 Content-Type: MULTIPART/mixed; BOUNDARY="%s"
 
 "
-===DONE===

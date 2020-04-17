@@ -1,4 +1,4 @@
-PHP 7.4 UPGRADE NOTES
+PHP 8.0 UPGRADE NOTES
 
 1. Backward Incompatible Changes
 2. New Features
@@ -12,9 +12,8 @@ PHP 7.4 UPGRADE NOTES
 10. New Global Constants
 11. Changes to INI File Handling
 12. Windows Support
-12. Migration to pkg-config
-14. Other Changes
-15. Performance Improvements
+13. Other Changes
+14. Performance Improvements
 
 
 ========================================
@@ -22,153 +21,534 @@ PHP 7.4 UPGRADE NOTES
 ========================================
 
 - Core:
-  . Referencing parent:: inside a class that does not have a parent will now
-    generate a compile-time error. Previously the error was only emitted at
-    run-time.
+  . Methods with the same name as the class are no longer interpreted as
+    constructors. The __construct() method should be used instead.
+  . Removed ability to call non-static methods statically.
+  . Removed (unset) cast.
+  . Removed track_errors ini directive. This means that $php_errormsg is no
+    longer available. The error_get_last() function may be used instead.
+  . Removed the ability to define case-insensitive constants. The third
+    argument to define() may no longer be true.
+  . Access to undefined constants now always results in an Error exception.
+    Previously, unqualified constant accesses resulted in a warning and were
+    interpreted as strings.
+  . Removed ability to specify an autoloader using an __autoload() function.
+    spl_autoload_register() should be used instead.
+  . Removed the $errcontext argument for custom error handlers.
+  . Removed create_function(). Anonymous functions may be used instead.
+  . Removed each(). foreach or ArrayIterator should be used instead.
+  . Removed ability to unbind $this from closures that were created from a
+    method, using Closure::fromCallable() or ReflectionMethod::getClosure().
+  . Also removed ability to unbind $this from proper closures that contain uses
+    of $this.
+  . Removed ability to use array_key_exists() with objects. Use one of isset()
+    or property_exists() instead.
+  . Made the behavior of array_key_exists() regarding the type of the key
+    parameter consistent with isset() and normal array access. All key types now use
+    the usual coercions and array/object keys throw a TypeError.
+  . Any array that has a number n as its first numeric key will use n+1 for
+    its next implicit key. Even if n is negative.
+    RFC: https://wiki.php.net/rfc/negative_array_index
+  . The default error_reporting level is now E_ALL. Previously it excluded
+    E_NOTICE and E_DEPRECATED.
+  . display_startup_errors is now enabled by default.
+  . Using "parent" inside a class that has no parent will now result in a
+    fatal compile-time error.
+  . The @ operator will no longer silence fatal errors (E_ERROR, E_CORE_ERROR,
+    E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR, E_PARSE). Error handlers
+    that expect error_reporting to be 0 when @ is used, should be adjusted to
+    use a mask check instead:
 
-- Curl:
-  . Attempting to serialize a CURLFile class will now generate an exception.
-    Previously the exception was only thrown on unserialization.
+        // Replace
+        function my_error_handler($err_no, $err_msg, $filename, $linenum) {
+            if (error_reporting() == 0) {
+                return; // Silenced
+            }
+            // ...
+        }
+
+        // With
+        function my_error_handler($err_no, $err_msg, $filename, $linenum) {
+            if (!(error_reporting() & $err_no)) {
+                return; // Silenced
+            }
+            // ...
+        }
+
+    Additionally, care should be taken that error messages are not displayed in
+    production environments, which can result in information leaks. Please
+    ensure that display_errors=Off is used in conjunction with error logging.
+  . Inheritance errors due to incompatible method signatures (LSP violations)
+    will now always generate a fatal error. Previously a warning was generated
+    in some cases.
+    RFC: https://wiki.php.net/rfc/lsp_errors
+  . The precedence of the concatenation operator has changed relative to
+    bitshifts and addition as well as subtraction.
+    RFC: https://wiki.php.net/rfc/concatenation_precedence
+  . Arguments with a default-value that resolves to null at run-time will no
+    longer implicitly mark the argument type as nullable. Either use an explicit
+    nullable type, or an explicit null default value instead.
+
+        // Replace
+        function test(int $arg = CONST_RESOLVING_TO_NULL) {}
+        // With
+        function test(?int $arg = CONST_RESOLVING_TO_NULL) {}
+        // Or
+        function test(int $arg = null) {}
+  . A number of warnings have been converted into Error exceptions:
+
+    * Attempting to write to a property of a non-object. Previously this
+      implicitly created an stdClass object for null, false and empty strings.
+    * Attempting to append an element to an array for which the PHP_INT_MAX key
+      is already used.
+    * Attempting to use an invalid type (array or object) as an array key or
+      string offset.
+    * Attempting to write to an array index of a scalar value.
+    * Attempting to unpack a non-array/Traversable.
+
+    A number of notices have been converted into warnings:
+
+    * Attempting to read an undefined variable.
+    * Attempting to read an undefined property.
+    * Attempting to read a property of a non-object.
+    * Attempting to access an array index of a non-array.
+    * Attempting to convert an array to string.
+    * Attempting to use a resource as an array key.
+    * Attempting to use null, a boolean or a float as a string offset.
+    * Attempting to read an out-of-bounds string offset.
+    * Attempting to assign an empty string to a string offset.
+
+    RFC: https://wiki.php.net/rfc/engine_warnings
+  . Attempting to assign multiple bytes to a string offset will now emit a warning.
+  . Unexpected characters in source files (such as null bytes outside of
+    strings) will now result in a ParseError exception instead of a compile
+    warning.
+  . Uncaught exceptions now go through "clean shutdown", which means that
+    destructors will be called after an uncaught exception.
+  . Compile time fatal error "Only variables can be passed by reference" has been
+    delayed until run-time and converted to "Cannot pass parameter by reference"
+    exception.
+  . Some "Only variables should be passed by reference" notices have been converted
+    to "Cannot pass parameter by reference" exception.
+  . The generated name for anonymous classes has changed. It will now include
+    the name of the first parent or interface:
+
+        new class extends ParentClass {};
+        // -> ParentClass@anonymous
+        new class implements FirstInterface, SecondInterface {};
+        // -> FirstInterface@anonymous
+        new class {};
+        // -> class@anonymous
+
+    The name shown above is still followed by a null byte and and a unique
+    suffix.
+  . Declaring a required parameter after an optional one is deprecated. As an
+    exception, declaring a parameter of the form "Type $param = null" before
+    a required one continues to be allowed, because this pattern was sometimes
+    used to achieve nullable types in older PHP versions.
+
+        function test($a = [], $b) {}       // Deprecated
+        function test(Foo $a = null, $b) {} // Allowed
+  . Non-absolute trait method references in trait alias adaptations are now
+    required to be unambiguous:
+
+        class X {
+            use T1, T2 {
+               func as otherFunc;
+            }
+            function func() {}
+        }
+
+    If both T1::func() and T2::func() exist, this code was previously silently
+    accepted, and func as assumed to refer to T1::func. Now it will generate a
+    fatal error instead, and either T1::func or T2::func needs to be written
+    explicitly.
+  . The signature of abstract methods defined in traits is now checked against
+    the implementing class method:
+
+        trait MyTrait {
+            abstract private function neededByTrait(): string;
+        }
+
+        class MyClass {
+            use MyTrait;
+
+            // Error, because of return type mismatch.
+            private function neededByTrait(): int { return 42; }
+        }
+
+    RFC: https://wiki.php.net/rfc/abstract_trait_method_validation
+
+- COM:
+  . Removed the ability to import case-insensitive constants from type
+    libraries. The second argument to com_load_typelib() may no longer be false;
+    com.autoregister_casesensitive may no longer be disabled; case-insensitive
+    markers in com.typelib_file are ignored.
 
 - Date:
-  . Calling var_dump() or similar on a DateTime(Immutable) instance will no
-    longer leave behind accessible properties on the object.
+  . mktime() and gmmktime() now require at least one argument. time() can be
+    used to get the current timestamp.
+
+- dom:
+  . Remove unimplemented classes from ext/dom that had no behavior and contained
+    test data. These classes have also been removed in the latest version of DOM
+	standard:
+
+     * DOMNameList
+     * DomImplementationList
+     * DOMConfiguration
+     * DomError
+     * DomErrorHandler
+     * DOMImplementationSource
+     * DOMLocator
+     * DOMUserDataHandler
+     * DOMTypeInfo
+
+- Exif:
+  . Removed read_exif_data(). exif_read_data() should be used instead.
+
+- Filter:
+  . The FILTER_FLAG_SCHEME_REQUIRED and FILTER_FLAG_HOST_REQUIRED flags for the
+    FILTER_VALIDATE_URL filter have been removed. The scheme and host are (and
+    have been) always required.
+  . The INPUT_REQUEST and INPUT_SESSION source for filter_input() etc have been
+    removed. These were never implemented and their use always generated a
+    warning.
+
+- GD:
+  . The GD extension now uses objects as the underlying data structure for
+    images, rather than resources. These objects are completely opaque, i.e.
+    they don't have any methods.
+  . The deprecated function image2wbmp() has been removed.
+    RFC: https://wiki.php.net/rfc/image2wbmp
+  . The deprecated functions png2wbmp() and jpeg2wbmp() have been removed.
+    RFC: https://wiki.php.net/rfc/deprecate-png-jpeg-2wbmp
+  . The default $mode parameter of imagecropauto() no longer accepts -1.
+    IMG_CROP_DEFAULT should be used instead.
+
+- GMP:
+  . gmp_random() has been removed. One of gmp_random_range() or
+    gmp_random_bits() should be used instead.
+
+- Iconv:
+  . iconv() implementations which do not properly set errno in case of errors,
+    are no longer supported.
 
 - Intl:
-  . The default parameter value of idn_to_ascii() and idn_to_utf8() is now
-    INTL_IDNA_VARIANT_UTS46 instead of the deprecated INTL_IDNA_VARIANT_2003.
+  . The deprecated constant INTL_IDNA_VARIANT_2003 has been removed.
+    RFC: https://wiki.php.net/rfc/deprecate-and-remove-intl_idna_variant_2003
+  . The deprecated Normalizer::NONE constant has been removed.
+  . The IntlDateFormatter::RELATIVE_FULL, IntlDateFormatter::RELATIVE_LONG,
+    IntlDateFormatter::RELATIVE_MEDIUM, and IntlDateFormatter::RELATIVE_SHORT constants
+    have been added.
 
-- Openssl:
-  . The openssl_random_pseudo_bytes() function will now throw an exception in
-    error situations, similar to random_bytes(). In particular, an Error is
-    thrown if the number of requested bytes is smaller *or equal* than zero,
-    and an Exception is thrown is sufficient randomness cannot be gathered.
-    The $crypto_strong output argument is guaranteed to always be true if the
-    function does not throw, so explicitly checking it is not necessary.
-    RFC: http://php.net/manual/de/function.openssl-random-pseudo-bytes.php
+- LDAP:
+  . The deprecated function ldap_sort has been removed.
+
+- Mbstring:
+  . The mbstring.func_overload directive has been removed. The related
+    MB_OVERLOAD_MAIL, MB_OVERLOAD_STRING, and MB_OVERLOAD_REGEX constants have
+    also been removed. Finally, the "func_overload" and "func_overload_list"
+    entries in mb_get_info() have been removed.
+  . mb_parse_str() can no longer be used without specifying a result array.
+  . A number of deprecated mbregex aliases have been removed. See the following
+    list for which functions should be used instead:
+
+     * mbregex_encoding()      -> mb_regex_encoding()
+     * mbereg()                -> mb_ereg()
+     * mberegi()               -> mb_eregi()
+     * mbereg_replace()        -> mb_ereg_replace()
+     * mberegi_replace()       -> mb_eregi_replace()
+     * mbsplit()               -> mb_split()
+     * mbereg_match()          -> mb_ereg_match()
+     * mbereg_search()         -> mb_ereg_search()
+     * mbereg_search_pos()     -> mb_ereg_search_pos()
+     * mbereg_search_regs()    -> mb_ereg_search_regs()
+     * mbereg_search_init()    -> mb_ereg_search_init()
+     * mbereg_search_getregs() -> mb_ereg_search_getregs()
+     * mbereg_search_getpos()  -> mb_ereg_search_getpos()
+     * mbereg_search_setpos()  -> mb_ereg_search_setpos()
+
+  . The 'e' modifier for mb_ereg_replace() has been removed.
+    mb_ereg_replace_callback() should be used instead.
+  . A non-string pattern argument to mb_ereg_replace() will now be interpreted
+    as a string instead of an ASCII codepoint. The previous behavior may be
+    restored with an explicit call to chr().
+  . The needle argument for mb_strpos(), mb_strrpos(), mb_stripos(), mb_strripos(),
+    mb_strstr(), mb_stristr(), mb_strrchr() and mb_strrichr() can now be empty.
+  . The $is_hex parameter, which was not used internally, has been removed from
+    mb_decode_numericentity().
+  . The legacy behaviour of passing the encoding as the third argument instead of an offset for the mb_strrpos
+    function has been removed, provide an explicit 0 offset with the encoding as the fourth argument.
+
+- PCRE:
+  . When passing invalid escape sequences they are no longer interpreted as
+    literals. This behaviour previously required the X modifier - which is
+    now ignored.
 
 - PDO:
-  . Attempting to serialize a PDO or PDOStatement instance will now generate
-    an Exception rather than a PDOException, consistent with other internal
-    classes which do not support serialization.
+  . The method PDOStatement::setFetchMode() now accepts the following signature:
+
+        PDOStatement::setFetchMode($mode, $classname, $params)
+
+- PDO_ODBC:
+  . The php.ini directive pdo_odbc.db2_instance_name has been removed
 
 - Reflection:
-  . Reflection objects will now generate an exception if an attempt is made
-    to serialize them. Serialization for reflection objects was never
-    supported and resulted in corrupted reflection objects. It has been
-    explicitly prohibited now.
+  . The method signatures
+
+        ReflectionClass::newInstance($args)
+        ReflectionFunction::invoke($args)
+        ReflectionMethod::invoke($object, $args)
+
+    have been changed to:
+
+        ReflectionClass::newInstance(...$args)
+        ReflectionFunction::invoke(...$args)
+        ReflectionMethod::invoke($object, ...$args)
+
+    Code that must be compatible with both PHP 7 and PHP 8 can use the following
+    signatures to be compatible with both versions:
+
+        ReflectionClass::newInstance($arg = null, ...$args)
+        ReflectionFunction::invoke($arg = null, ...$args)
+        ReflectionMethod::invoke($object, $arg = null, ...$args)
+
+  . The ReflectionType::__toString() method will now return a complete debug
+    representation of the type, and is no longer deprecated. In particular the
+    result will include a nullability indicator for nullable types. The format
+    of the return value is not stable and may change between PHP versions.
+  . Reflection export() methods have been removed.
+  . The following methods can now return information about default values of
+    parameters of internal functions:
+        ReflectionParameter::isDefaultValueAvailable()
+        ReflectionParameter::getDefaultValue()
+        ReflectionParameter::isDefaultValueConstant()
+        ReflectionParameter::getDefaultValueConstantName()
+
+- Socket:
+  . The deprecated AI_IDN_ALLOW_UNASSIGNED and AI_IDN_USE_STD3_ASCII_RULES
+    flags for socket_addrinfo_lookup() have been removed.
 
 - SPL:
-  . Calling get_object_vars() on an ArrayObject instance will now always return
-    the properties of the ArrayObject itself (or a subclass). Previously it
-    returned the values of the wrapped array/object unless the STD_PROP_LIST
-    flag was specified. Other affected operations are:
-
-     * ReflectionObject::getProperties()
-     * reset(), current(), etc. Use Iterator methods instead.
-     * Potentially others working on object properties as a list.
-
-    (array) casts are *not* affected. They will continue to return either the
-    wrapped array, or the ArrayObject properties, depending on whether the
-    STD_PROP_LIST flag is used.
-  . SplPriorityQueue::setExtractFlags() will throw an exception if zero is
-    passed. Previously this would generate a recoverable fatal error on the
-    next extraction operation.
+  . SplFileObject::fgetss() has been removed.
+  . SplHeap::compare($a, $b) now specifies a method signature. Inheriting
+    classes implementing this method will now have to use a compatible
+    method signature.
+  . SplDoublyLinkedList::push() now returns void instead of true
+  . SplDoublyLinkedList::unshift() now returns void instead of true
+  . SplQueue::enqueue() now returns void instead of true
 
 - Standard:
-  . The "o" serialization format has been removed. As it is never produced by
-    PHP, this may only break unserialization of manually crafted strings.
+  . assert() will no longer evaluate string arguments, instead they will be
+    treated like any other argument. assert($a == $b) should be used instead of
+    assert('$a == $b'). The assert.quiet_eval ini directive and
+    ASSERT_QUIET_EVAL constants have also been removed, as they would no longer
+    have any effect.
+  . parse_str() can no longer be used without specifying a result array.
+  . fgetss() has been removed.
+  . The string.strip_tags filter has been removed.
+  . The needle argument of strpos(), strrpos(), stripos(), strripos(), strstr(),
+    strchr(), strrchr(), and stristr() will now always be interpreted as a
+    string. Previously non-string needles were interpreted as an ASCII code
+    point. An explicit call to chr() can be used to restore the previous
+    behavior.
+  . The needle argument for strpos(), strrpos(), stripos(), strripos(), strstr(),
+    stristr() and strrchr() can now be empty.
+  . The length argument for substr(), substr_count(), substr_compare(), and
+    iconv_substr() can now be null. Null values will behave as if no length
+    argument was provided and will therefore return the remainder of the string
+    instead of an empty string.
+  . The length argument for array_splice() can now be null. Null values will
+    behave identically to omitting the argument, thus removing everything from
+    the 'offset' to the end of the array.
+  . The 'salt' option of password_hash() is no longer supported. If the 'salt'
+    option is used a warning is generated, the provided salt is ignored, and a
+    generated salt is used instead.
+  . The quotemeta() function will now return an empty string if an empty string
+    was passed. Previously false was returned.
+  . hebrevc() has been removed.
+  . convert_cyr_string() has been removed.
+  . money_format() has been removed.
+  . ezmlm_hash() has been removed.
+  . restore_include_path() has been removed.
+  . get_magic_quotes_gpc() and get_magic_quotes_gpc_runtime() has been removed.
+  . FILTER_SANITIZE_MAGIC_QUOTES has been removed.
+  . Calling implode() with parameters in a reverse order ($pieces, $glue) is no
+    longer supported.
+  . parse_url() will now distinguish absent and empty queries and fragments:
+
+        http://example.com/foo   => query = null, fragment = null
+        http://example.com/foo?  => query = "",   fragment = null
+        http://example.com/foo#  => query = null, fragment = ""
+        http://example.com/foo?# => query = "",   fragment = ""
+
+    Previously all cases resulted in query and fragment being null.
+  . var_dump() and debug_zval_dump() will now print floating-point numbers
+    using serialize_precision rather than precision. In a default configuration,
+    this means that floating-point numbers are now printed with full accuracy
+    by these debugging functions.
+
+- tidy:
+  . The $use_include_path parameter, which was not used internally, has been
+    removed from tidy_repair_string().
+
+- XML:
+  . xml_parser_create(_ns) will now return an XmlParser object rather than a
+    resource. Return value checks using is_resource() should be replaced with
+    checks for `false`. The xml_parser_free() function no longer has an effect,
+    instead the XmlParser instance is automatically destroyed if it is no longer
+    referenced.
+
+- XMLWriter:
+  . The XMLWriter functions now accept and return, respectively, XMLWriter
+    objects instead of resources.
+
+- Zip:
+  . ZipArchive::OPSYS_Z_CPM have been removed, should use ZipArchive::OPSYS_CPM
+    (this name was a typo).
+
+- Zlib:
+  . gzgetss() has been removed.
 
 ========================================
 2. New Features
 ========================================
 
 - Core:
-  . Added support for typed properties. For example:
+  . Added support for union types.
+    RFC: https://wiki.php.net/rfc/union_types_v2
+  . Added WeakMap.
+    RFC: https://wiki.php.net/rfc/weak_maps
+  . Added ValueError class.
+  . Any number of function parameters may now be replaced by a variadic
+    argument, as long as the types are compatible. For example, the following
+    code is now allowed:
 
-        class User {
-            public int $id;
-            public string $name;
+        class A {
+            public function method(int $many, string $parameters, $here) {}
+        }
+        class B extends A {
+            public function method(...$everything) {}
+        }
+  . "static" (as in "late static binding") can now be used as a return type:
+
+        class Test {
+            public function create(): static {
+                return new static();
+            }
         }
 
-    This will enforce that $user->id can only be assigned integer and
-    $user->name can only be assigned strings. For more information see the
-    RFC: https://wiki.php.net/rfc/typed_properties_v2
-  . Added support for coalesce assign (??=) operator. For example:
+    RFC: https://wiki.php.net/rfc/static_return_type
+  . It is now possible to fetch the class name of an object using
+    `$object::class`. The result is the same as `get_class($object)`.
+    RFC: https://wiki.php.net/rfc/class_name_literal_on_object
+  . New and instanceof can now be used with arbitrary expressions, using
+    `new (expression)(...$args)` and `$obj instanceof (expression)`.
+    RFC: https://wiki.php.net/rfc/variable_syntax_tweaks
+  . Some consistency fixes to variable syntax have been applied, for example
+    writing `Foo::BAR::$baz` is now allowed.
+    RFC: https://wiki.php.net/rfc/variable_syntax_tweaks
+  . Added Stringable interface, which is automatically implemented if a class
+    defines a __toString() method.
+    RFC: https://wiki.php.net/rfc/stringable
+  . Traits can now define abstract private methods.
 
-        $array['key'] ??= computeDefault();
-        // is roughly equivalent to
-        if (!isset($array['key'])) {
-            $array['key'] = computeDefault();
-        }
+- Date:
+  . Added DateTime::createFromInterface() and
+    DateTimeImmutable::createFromInterface().
 
-    RFC: https://wiki.php.net/rfc/null_coalesce_equal_operator
+- dom:
+  . Introduce DOMParentNode and DOMChildNode with new traversal and manipulation APIs
+    RFC: https://wiki.php.net/rfc/dom_living_standard_api
 
-- FFI:
-  . A new extension which provides a simple way to call native functions, access
-    native variables and create/access data structures defined in C libraries.
-    RFC: https://wiki.php.net/rfc/ffi
-
-- OPcache:
-  . Support for preloading code has been added.
-    RFC: https://wiki.php.net/rfc/preload
-
-- PDO_OCI:
-  . PDOStatement::getColumnMeta() is now available
-
-- PDO_SQLite:
-  . PDOStatement::getAttribute(PDO::SQLITE_ATTR_READONLY_STATEMENT) allows to
-    check whether this statement is read-only, i.e. whether it doesn't modify
-    the database.
+- Zip:
+  . Extension updated to version 1.19.0
+  . New ZipArchive::lastId property to get index value of last added entry.
+  . Error can be checked after an archive is closed using ZipArchive::status,
+    ZipArchive::statusSys properties or ZipArchive::getStatusString() method.
+  . The remove_path option of ZipArchive::addGlob() and ::addPattern() is now
+    treated as arbitrary string prefix (for consistency with the add_path
+    option), whereas formerly it was treated as directory name.
+  . Optional compression / encryption features are listed in phpinfo.
 
 ========================================
 3. Changes in SAPI modules
 ========================================
 
+- CGI and FPM will now use CONTEXT_DOCUMENT_ROOT to scan for .user.ini files,
+  if it is defined. Otherwise, DOCUMENT_ROOT will be used as before. This
+  improves support for Apache mod_userdir and mod_alias.
+
 ========================================
 4. Deprecated Functionality
 ========================================
 
-- Core:
-  . Unbinding $this of a non-static method through a combination of
-    ReflectionMethod::getClosure() and closure rebinding is deprecated. Doing
-    so is equivalent to calling a non-static method statically, which has been
-    deprecated since PHP 7.0.
+- Zip:
+  . Using empty file as ZipArchive is deprecated. Libzip 1.6.0
+    do not accept empty files as valid zip archives any longer.
+    Existing workaround will be removed in next version.
 
 ========================================
 5. Changed Functions
 ========================================
 
-- SPL:
-  . SplFileObject::fputcsv(), ::fgetcsv() and ::setCsvControl() now accept an
-    empty string as $escape argument, which disables the propriertary PHP
-    escaping mechanism. SplFileObject::getCsvControl() now may also return an
-    empty string for the third array element, accordingly.
-
-- Standard:
-  . fputcsv() and fgetcsv() now accept an empty string as $escape argument,
-    which disables the propriertary PHP escaping mechanism. The behavior of
-    str_getcsv() has been adjusted accordingly (formerly, an empty string was
-    identical to using the default).
+- Zip
+ . ZipArchive::addGlob and ZipArchive::addPattern methods accept more
+   values in the "options" array argument:
+   . flags
+   . comp_method
+   . comp_flags
+   . env_method
+   . enc_pasword
+ . ZipArchive::addEmptyDir, ZipArchive::addFile and aZipArchive::addFromString
+   methods have a new "flags" argument. This allow to manage name encoding
+   (ZipArchive::FL_ENC_*) and entry replacement (ZipArchive::FL_OVERWRITE)
+ . ZipArchive::extractTo now restore file modification time.
 
 ========================================
 6. New Functions
 ========================================
 
-- OpenSSL:
-  . Added openssl_x509_verify(mixed cert, mixed key) function that verifies the
-    signature of the certificate using a public key. A wrapper around the
-    OpenSSL's X509_verify() function.
-    See <https://github.com/php/php-src/pull/3624>.
+- PCRE:
+  . Added preg_last_error_msg(), which returns a human-readable message for
+    the last PCRE error. It complements preg_last_error(), which returns an
+    integer enum instead.
 
 - SQLite3:
-  . Added SQLite3Stmt::getSQL() to retrieve the SQL of the statement. If TRUE is
-    passed as parameter, query parameters will be replaced in the return value
-    by their currently bound value, if libsqlite ≥ 3.14 is used.
+  . Add SQLite3::setAuthorizer() and respective class constants to set a
+    userland callback that will be used to authorize or not an action on the
+    database.
+    PR: https://github.com/php/php-src/pull/4797
+
+- Standard:
+  . Added str_contains($haystack, $needle) function, which checks whether
+    $haystack contains $needle as a sub-string. It is equivalent to writing
+    strpos($haystack, $needle) !== false.
+  . Added fdiv() function, which performs a floating-point division under
+    IEEE 754 semantics. Division by zero is considered well-defined and
+    will return one of Inf, -Inf or NaN.
+
+- Zip:
+  . ZipArchive::setMtimeName and ZipArchive::setMtimeIndex to set the
+    modification time of an entry.
+  . ZipArchive::setProgressCallback to provide updates during archive close.
+  . ZipArchive::setCancelCallback to allow cancellation during archive close.
+  . ZipArchive::replaceFile to replace an entry content.
+  . ZipArchive::isCompressionMethodSupported to check optional compression
+    features.
+  . ZipArchive::isEncryptionMethodSupported to check optional encryption
+    features.
 
 ========================================
 7. New Classes and Interfaces
 ========================================
+
+- Tokenizer:
+  . The new PhpToken class adds an object-based interface to the tokenizer.
+    It provides a more uniform and ergonomic representation, while being more
+    memory efficient and faster.
+    RFC: https://wiki.php.net/rfc/token_as_object
 
 ========================================
 8. Removed Extensions and SAPIs
@@ -178,79 +558,27 @@ PHP 7.4 UPGRADE NOTES
 9. Other Changes to Extensions
 ========================================
 
+- CURL:
+  . The CURL extension now requires at least libcurl 7.29.0.
+
 - GD:
-  . The behavior of imagecropauto() in the bundled libgd has been synced with
-    that of system libgd:
-     * IMG_CROP_DEFAULT is no longer falling back to IMG_CROP_SIDES
-     * Threshold-cropping now uses the algorithm of system libgd
-  . The default $mode parameter of imagecropauto() has been changed to
-    IMG_CROP_DEFAULT; passing -1 is now deprecated.
-  . imagescale() now supports aspect ratio preserving scaling to a fixed height
-    by passing -1 as $new_width.
+  . The $num_points parameter of imagepolygon(), imageopenpolygon() and
+    imagefilledpolygon() is now optional, i.e. these functions may be called
+    with either 3 or 4 arguments. If the arguments is omitted, it is calculated
+    as count($points)/2.
+  . The function imagegetinterpolation() to get the current interpolation method
+    has been added.
 
-- Hash:
-  . The hash extension cannot be disabled anymore and is always an integral
-    part of any PHP build, similar to the date extension.
-
-- Intl:
-  . The Intl extension now requires at least ICU 50.1.
-
-- Libxml:
-  . All libxml based extensions now require libxml 2.7.6 or newer.
-
-- Reflection:
-  . Numeric value of class, property, function and constant modifiers was
-    changed. Don't filter methods and properties through
-    ReflectionClass::getMethods() and ReflectionClass::getProperties(), or test
-    results of Reflection...::getModifiers(), using hard-coded numeric values.
-    Use corresponding constants instead (e.g. ReflectionMethod::IS_PUBLIC).
-
-- SQLite3:
-  . The bundled libsqlite has been removed.  To build the SQLite3 extension
-    a system libsqlite3 ≥ 3.7.4 is now required. To build the PDO_SQLite
-    extension a system libsqlite3 ≥ 3.5.0 is now required.
-  . (Un)serialization of SQLite3, SQLite3Stmt and SQLite3Result is now explicitly
-    forbidden. Formerly, serialization of instances of these classes was
-    possible, but unserialization yielded unusable objects.
-  . The @param notation can now also be used to denote SQL query parameters.
-
-- Zip:
-  . The bundled libzip library has been removed. A system libzip >= 0.11 is now
-    necessary to build the extension.
+- MBString:
+  . The Unicode data tables have been updated to version 13.0.0.
 
 ========================================
 10. New Global Constants
 ========================================
 
-- Tidy:
-  . TIDY_TAG_ARTICLE
-  . TIDY_TAG_ASIDE
-  . TIDY_TAG_AUDIO
-  . TIDY_TAG_BDI
-  . TIDY_TAG_CANVAS
-  . TIDY_TAG_COMMAND
-  . TIDY_TAG_DATALIST
-  . TIDY_TAG_DETAILS
-  . TIDY_TAG_DIALOG
-  . TIDY_TAG_FIGCAPTION
-  . TIDY_TAG_FIGURE
-  . TIDY_TAG_FOOTER
-  . TIDY_TAG_HEADER
-  . TIDY_TAG_HGROUP
-  . TIDY_TAG_MAIN
-  . TIDY_TAG_MARK
-  . TIDY_TAG_MENUITEM
-  . TIDY_TAG_METER
-  . TIDY_TAG_NAV
-  . TIDY_TAG_OUTPUT
-  . TIDY_TAG_PROGRESS
-  . TIDY_TAG_SECTION
-  . TIDY_TAG_SOURCE
-  . TIDY_TAG_SUMMARY
-  . TIDY_TAG_TEMPLATE
-  . TIDY_TAG_TIME
-  . TIDY_TAG_TRACK
-  . TIDY_TAG_VIDEO
+- Filter:
+  . FILTER_VALIDATE_BOOL has been added as an alias for FILTER_VALIDATE_BOOLEAN.
+    The new name is preferred, as it uses the canonical type name.
 
 ========================================
 11. Changes to INI File Handling
@@ -260,63 +588,23 @@ PHP 7.4 UPGRADE NOTES
 12. Windows Support
 ========================================
 
-- stat:
-  . The stat implementation has been refactored.
-    - An inode number is delivered and is based on the NTFS file index.
-    - The device number is now based on the volume serial number.
+- Standard:
+  . Program execution functions (proc_open(), exec(), popen() etc.) using the
+    shell now consistently execute `%comspec% /s /c "$commandline"`, which has
+    the same effect as executing `$commandline` (without additional quotes).
 
-  Note, that both values derived from the system and provided as is on 64-bit
-  systems. On 32-bit system, these values might overflow the 32-bit integer in
-  PHP, so they're a fake.
-
-========================================
-13. Migration to pkg-config
-========================================
-
-A number of extensions have been migrated to exclusively use pkg-config for
-the detection of library dependencies. Generally, this means that instead of
-using --with-foo-dir=DIR or similar only --with-foo is used. Custom library
-paths can be specified either by adding additional directories to
-PKG_CONFIG_PATH or by explicitly specifying compilation options through
-FOO_CFLAGS and FOO_LIBS.
-
-The following extensions are affected:
-
-- Curl:
-  . --with-curl no longer accepts a directory.
-
-- Intl:
-  . --with-icu-dir has been removed. If --enable-intl is passed, then libicu is
-    always required.
-
-- OpenSSL:
-  . --with-openssl no longer accepts a directory.
-
-- PCRE:
-  . --with-pcre-regex has been removed. Instead --with-external-pcre is provided
-    to opt into using an external PCRE library, rather than the bundled one.
-
-- GD:
-  . --with-gd becomes --enable-gd (whether to enable the extension at all) and
-    --with-external-gd (to opt into using an external libgd, rather than the
-    bundled one).
-  . --with-png-dir has been removed. libpng is required.
-  . --with-zlib-dir has been removed. zlib is required.
-  . --with-freetype-dir becomes --with-freetype.
-  . --with-jpeg-dir becomes --with-jpeg.
-  . --with-webp-dir becomes --with-webp.
-  . --with-xpm-dir becomes --with-xpm.
+- php-test-pack:
+  . The test runner has been renamed from run-test.php to run-tests.php, to
+    match its name in php-src.
 
 ========================================
-14. Other Changes
+13. Other Changes
 ========================================
 
 ========================================
-15. Performance Improvements
+14. Performance Improvements
 ========================================
 
-- Core:
-  . A specialized VM opcode for the array_key_exists() function has been added,
-    which improves performance of this function if it can be statically
-    resolved. In namespaced code, this may require writing \array_key_exists()
-    or explicitly importing the function.
+- array_slice() on an array without gaps will no longer scan the whole array to find
+  the start offset. This may significantly reduce the runtime of the function
+  with large offsets and small lengths.

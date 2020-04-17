@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine, CFG - Control Flow Graph                                |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -22,7 +22,7 @@
 /* zend_basic_bloc.flags */
 #define ZEND_BB_START            (1<<0)  /* fist block             */
 #define ZEND_BB_FOLLOW           (1<<1)  /* follows the next block */
-#define ZEND_BB_TARGET           (1<<2)  /* jump taget             */
+#define ZEND_BB_TARGET           (1<<2)  /* jump target            */
 #define ZEND_BB_EXIT             (1<<3)  /* without successors     */
 #define ZEND_BB_ENTRY            (1<<4)  /* stackless entry        */
 #define ZEND_BB_TRY              (1<<5)  /* start of try block     */
@@ -35,7 +35,7 @@
 #define ZEND_BB_LOOP_HEADER      (1<<16)
 #define ZEND_BB_IRREDUCIBLE_LOOP (1<<17)
 
-#define ZEND_BB_REACHABLE        (1<<31)
+#define ZEND_BB_REACHABLE        (1U<<31)
 
 #define ZEND_BB_PROTECTED        (ZEND_BB_ENTRY|ZEND_BB_RECV_ENTRY|ZEND_BB_TRY|ZEND_BB_CATCH|ZEND_BB_FINALLY|ZEND_BB_FINALLY_END|ZEND_BB_UNREACHABLE_FREE)
 
@@ -92,7 +92,6 @@ typedef struct _zend_cfg {
 } zend_cfg;
 
 /* Build Flags */
-#define ZEND_RT_CONSTANTS              (1<<31)
 #define ZEND_CFG_STACKLESS             (1<<30)
 #define ZEND_SSA_DEBUG_LIVENESS        (1<<29)
 #define ZEND_SSA_DEBUG_PHI_PLACEMENT   (1<<28)
@@ -102,15 +101,15 @@ typedef struct _zend_cfg {
 #define ZEND_CALL_TREE                 (1<<23)
 #define ZEND_SSA_USE_CV_RESULTS        (1<<22)
 
-#define CRT_CONSTANT_EX(op_array, opline, node, rt_constants) \
-	((rt_constants) ? \
+#define CRT_CONSTANT_EX(op_array, opline, node) \
+	(((op_array)->fn_flags & ZEND_ACC_DONE_PASS_TWO) ? \
 		RT_CONSTANT(opline, (node)) \
 	: \
 		CT_CONSTANT_EX(op_array, (node).constant) \
 	)
 
 #define CRT_CONSTANT(node) \
-	CRT_CONSTANT_EX(op_array, opline, node, (build_flags & ZEND_RT_CONSTANTS))
+	CRT_CONSTANT_EX(op_array, opline, node)
 
 #define RETURN_VALUE_USED(opline) \
 	((opline)->result_type != IS_UNUSED)
@@ -126,11 +125,3 @@ int  zend_cfg_identify_loops(const zend_op_array *op_array, zend_cfg *cfg);
 END_EXTERN_C()
 
 #endif /* ZEND_CFG_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- */

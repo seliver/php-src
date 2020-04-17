@@ -15,7 +15,7 @@ if(! in_array( "string.rot13", $filters )) die( "skip rot13 filter not available
 
 echo "*** Testing stream_filter_remove() : basic functionality ***\n";
 
-$file = dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'streamfilterTest.txt';
+$file = __DIR__ . DIRECTORY_SEPARATOR . 'streamfilterTest.txt';
 touch( $file );
 
 $fp = fopen( $file, 'w+' );
@@ -31,11 +31,10 @@ fpassthru( $fp );
 fclose( $fp );
 
 ?>
-===DONE===
 --CLEAN--
 <?php
 
-$file = dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'streamfilterTest.txt';
+$file = __DIR__ . DIRECTORY_SEPARATOR . 'streamfilterTest.txt';
 unlink( $file );
 
 ?>
@@ -44,4 +43,3 @@ unlink( $file );
 bool(true)
 Grfgvat gur ebg13 svygre juvpu fuvsgf fbzr guvatf nebhaq.
 add some more un-filtered foobar
-===DONE===

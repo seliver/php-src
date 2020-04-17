@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -53,6 +51,9 @@ mysqlnd_auth_change_user(MYSQLND_CONN_DATA * const conn,
 								const zend_bool silent,
 								const zend_bool use_full_blown_auth_packet,
 								const char * const auth_protocol,
+								struct st_mysqlnd_authentication_plugin * auth_plugin,
+								const zend_uchar * const orig_auth_plugin_data,
+								const size_t orig_auth_plugin_data_len,
 								const zend_uchar * auth_plugin_data,
 								const size_t auth_plugin_data_len,
 								char ** switch_to_auth_protocol,
@@ -98,12 +99,3 @@ mysqlnd_run_authentication(
 PHPAPI void php_mysqlnd_scramble(zend_uchar * const buffer, const zend_uchar * const scramble, const zend_uchar * const pass, const size_t pass_len);
 
 #endif /* MYSQLND_AUTH_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

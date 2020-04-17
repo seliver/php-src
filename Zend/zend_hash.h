@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) Zend Technologies Ltd. (http://www.zend.com)           |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -39,6 +39,9 @@
 #define HASH_FLAG_STATIC_KEYS      (1<<4) /* long and interned strings */
 #define HASH_FLAG_HAS_EMPTY_IND    (1<<5)
 #define HASH_FLAG_ALLOW_COW_VIOLATION (1<<6)
+
+/* Only the low byte are real flags */
+#define HASH_FLAG_MASK 0xff
 
 #define HT_FLAGS(ht) (ht)->u.flags
 
@@ -168,7 +171,7 @@ ZEND_API int ZEND_FASTCALL zend_hash_str_del_ind(HashTable *ht, const char *key,
 ZEND_API int ZEND_FASTCALL zend_hash_index_del(HashTable *ht, zend_ulong h);
 ZEND_API void ZEND_FASTCALL zend_hash_del_bucket(HashTable *ht, Bucket *p);
 
-/* Data retreival */
+/* Data retrieval */
 ZEND_API zval* ZEND_FASTCALL zend_hash_find(const HashTable *ht, zend_string *key);
 ZEND_API zval* ZEND_FASTCALL zend_hash_str_find(const HashTable *ht, const char *key, size_t len);
 ZEND_API zval* ZEND_FASTCALL zend_hash_index_find(const HashTable *ht, zend_ulong h);
@@ -261,9 +264,11 @@ ZEND_API void  ZEND_FASTCALL zend_hash_merge_ex(HashTable *target, HashTable *so
 ZEND_API void  zend_hash_bucket_swap(Bucket *p, Bucket *q);
 ZEND_API void  zend_hash_bucket_renum_swap(Bucket *p, Bucket *q);
 ZEND_API void  zend_hash_bucket_packed_swap(Bucket *p, Bucket *q);
+
+typedef int (*bucket_compare_func_t)(Bucket *a, Bucket *b);
 ZEND_API int   zend_hash_compare(HashTable *ht1, HashTable *ht2, compare_func_t compar, zend_bool ordered);
-ZEND_API int   ZEND_FASTCALL zend_hash_sort_ex(HashTable *ht, sort_func_t sort_func, compare_func_t compare_func, zend_bool renumber);
-ZEND_API zval* ZEND_FASTCALL zend_hash_minmax(const HashTable *ht, compare_func_t compar, uint32_t flag);
+ZEND_API void  ZEND_FASTCALL zend_hash_sort_ex(HashTable *ht, sort_func_t sort_func, bucket_compare_func_t compare_func, zend_bool renumber);
+ZEND_API zval* ZEND_FASTCALL zend_hash_minmax(const HashTable *ht, bucket_compare_func_t compar, uint32_t flag);
 
 #define zend_hash_sort(ht, compare_func, renumber) \
 	zend_hash_sort_ex(ht, zend_sort, compare_func, renumber)
@@ -274,7 +279,7 @@ ZEND_API zval* ZEND_FASTCALL zend_hash_minmax(const HashTable *ht, compare_func_
 #define zend_hash_next_free_element(ht) \
 	(ht)->nNextFreeElement
 
-ZEND_API int ZEND_FASTCALL zend_hash_rehash(HashTable *ht);
+ZEND_API void ZEND_FASTCALL zend_hash_rehash(HashTable *ht);
 
 #if !ZEND_DEBUG && defined(HAVE_BUILTIN_CONSTANT_P)
 # define zend_new_array(size) \
@@ -294,6 +299,7 @@ ZEND_API int ZEND_FASTCALL zend_hash_rehash(HashTable *ht);
 
 ZEND_API HashTable* ZEND_FASTCALL _zend_new_array_0(void);
 ZEND_API HashTable* ZEND_FASTCALL _zend_new_array(uint32_t size);
+ZEND_API HashTable* ZEND_FASTCALL zend_new_pair(zval *val1, zval *val2);
 ZEND_API uint32_t zend_array_count(HashTable *ht);
 ZEND_API HashTable* ZEND_FASTCALL zend_array_dup(HashTable *source);
 ZEND_API void ZEND_FASTCALL zend_array_destroy(HashTable *ht);
@@ -1063,7 +1069,7 @@ static zend_always_inline void *zend_hash_get_current_data_ptr_ex(HashTable *ht,
 	_val = _z;
 
 /* The following macros are useful to insert a sequence of new elements
- * of packed array. They may be use insted of series of
+ * of packed array. They may be used instead of series of
  * zend_hash_next_index_insert_new()
  * (HashTable must have enough free buckets).
  */
@@ -1073,19 +1079,48 @@ static zend_always_inline void *zend_hash_get_current_data_ptr_ex(HashTable *ht,
 		uint32_t __fill_idx = __fill_ht->nNumUsed; \
 		ZEND_ASSERT(HT_FLAGS(__fill_ht) & HASH_FLAG_PACKED);
 
-#define ZEND_HASH_FILL_ADD(_val) do { \
-		ZVAL_COPY_VALUE(&__fill_bkt->val, _val); \
+#define ZEND_HASH_FILL_SET(_val) \
+		ZVAL_COPY_VALUE(&__fill_bkt->val, _val)
+
+#define ZEND_HASH_FILL_SET_NULL() \
+		ZVAL_NULL(&__fill_bkt->val)
+
+#define ZEND_HASH_FILL_SET_LONG(_val) \
+		ZVAL_LONG(&__fill_bkt->val, _val)
+
+#define ZEND_HASH_FILL_SET_DOUBLE(_val) \
+		ZVAL_DOUBLE(&__fill_bkt->val, _val)
+
+#define ZEND_HASH_FILL_SET_STR(_val) \
+		ZVAL_STR(&__fill_bkt->val, _val)
+
+#define ZEND_HASH_FILL_SET_STR_COPY(_val) \
+		ZVAL_STR_COPY(&__fill_bkt->val, _val)
+
+#define ZEND_HASH_FILL_SET_INTERNED_STR(_val) \
+		ZVAL_INTERNED_STR(&__fill_bkt->val, _val)
+
+#define ZEND_HASH_FILL_NEXT() do {\
 		__fill_bkt->h = (__fill_idx); \
 		__fill_bkt->key = NULL; \
 		__fill_bkt++; \
 		__fill_idx++; \
 	} while (0)
 
-#define ZEND_HASH_FILL_END() \
+#define ZEND_HASH_FILL_ADD(_val) do { \
+		ZEND_HASH_FILL_SET(_val); \
+		ZEND_HASH_FILL_NEXT(); \
+	} while (0)
+
+#define ZEND_HASH_FILL_FINISH() do { \
 		__fill_ht->nNumUsed = __fill_idx; \
 		__fill_ht->nNumOfElements = __fill_idx; \
 		__fill_ht->nNextFreeElement = __fill_idx; \
 		__fill_ht->nInternalPointer = 0; \
+	} while (0)
+
+#define ZEND_HASH_FILL_END() \
+		ZEND_HASH_FILL_FINISH(); \
 	} while (0)
 
 static zend_always_inline zval *_zend_hash_append_ex(HashTable *ht, zend_string *key, zval *zv, int interned)
@@ -1161,13 +1196,3 @@ static zend_always_inline void _zend_hash_append_ind(HashTable *ht, zend_string 
 }
 
 #endif							/* ZEND_HASH_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

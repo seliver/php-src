@@ -1,7 +1,8 @@
-dnl config.m4 for extension iconv
-
-PHP_ARG_WITH(iconv, for iconv support,
-[  --without-iconv[=DIR]     Exclude iconv support], yes)
+PHP_ARG_WITH([iconv],
+  [for iconv support],
+  [AS_HELP_STRING([[--without-iconv[=DIR]]],
+    [Exclude iconv support])],
+  [yes])
 
 if test "$PHP_ICONV" != "no"; then
 
@@ -142,16 +143,11 @@ int main() {
 }
     ]])],[
       AC_MSG_RESULT(yes)
-      PHP_DEFINE([ICONV_SUPPORTS_ERRNO],1,[ext/iconv])
-      AC_DEFINE([ICONV_SUPPORTS_ERRNO],1,[Whether iconv supports error no or not])
     ],[
       AC_MSG_RESULT(no)
-      PHP_DEFINE([ICONV_SUPPORTS_ERRNO],0,[ext/iconv])
-      AC_DEFINE([ICONV_SUPPORTS_ERRNO],0,[Whether iconv supports error no or not])
+      AC_MSG_ERROR(iconv does not support errno)
     ],[
-      AC_MSG_RESULT(no, cross-compiling)
-      PHP_DEFINE([ICONV_SUPPORTS_ERRNO],0,[ext/iconv])
-      AC_DEFINE([ICONV_SUPPORTS_ERRNO],0,[Whether iconv supports error no or not])
+      AC_MSG_RESULT(yes, cross-compiling)
     ])
 
     AC_MSG_CHECKING([if iconv supports //IGNORE])
@@ -161,6 +157,9 @@ int main() {
 
 int main() {
   iconv_t cd = iconv_open( "UTF-8//IGNORE", "UTF-8" );
+  if(cd == (iconv_t)-1) {
+    return 1;
+  }
   char *in_p = "\xC3\xC3\xC3\xB8";
   size_t in_left = 4, out_left = 4096;
   char *out = malloc(out_left);

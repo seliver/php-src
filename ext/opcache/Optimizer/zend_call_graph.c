@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine, Call Graph                                              |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -71,7 +71,9 @@ static int zend_foreach_op_array(zend_call_graph *call_graph, zend_script *scrip
 			continue;
 		}
 		ZEND_HASH_FOREACH_PTR(&ce->function_table, op_array) {
-			if (op_array->scope == ce && !(op_array->fn_flags & ZEND_ACC_TRAIT_CLONE)) {
+			if (op_array->scope == ce
+			 && op_array->type == ZEND_USER_FUNCTION
+			 && !(op_array->fn_flags & ZEND_ACC_TRAIT_CLONE)) {
 				if (func(call_graph, op_array) != SUCCESS) {
 					return FAILURE;
 				}
@@ -91,6 +93,7 @@ int zend_analyze_calls(zend_arena **arena, zend_script *script, uint32_t build_f
 	int call = 0;
 	zend_call_info **call_stack;
 	ALLOCA_FLAG(use_heap);
+	zend_bool is_prototype;
 
 	call_stack = do_alloca((op_array->last / 2) * sizeof(zend_call_info*), use_heap);
 	call_info = NULL;
@@ -101,8 +104,9 @@ int zend_analyze_calls(zend_arena **arena, zend_script *script, uint32_t build_f
 			case ZEND_INIT_STATIC_METHOD_CALL:
 				call_stack[call] = call_info;
 				func = zend_optimizer_get_called_func(
-					script, op_array, opline, (build_flags & ZEND_RT_CONSTANTS) != 0);
-				if (func) {
+					script, op_array, opline, &is_prototype);
+				/* TODO: Support prototypes? */
+				if (func && !is_prototype) {
 					call_info = zend_arena_calloc(arena, 1, sizeof(zend_call_info) + (sizeof(zend_send_arg_info) * ((int)opline->extended_value - 1)));
 					call_info->caller_op_array = op_array;
 					call_info->caller_init_opline = opline;
@@ -174,6 +178,10 @@ int zend_analyze_calls(zend_arena **arena, zend_script *script, uint32_t build_f
 				if (call_info) {
 					call_info->num_args = -1;
 				}
+				break;
+			case ZEND_EXIT:
+				/* In this case the DO_CALL opcode may have been dropped
+				 * and caller_call_opline will be NULL. */
 				break;
 		}
 		opline++;
@@ -248,10 +256,8 @@ static void zend_sort_op_arrays(zend_call_graph *call_graph)
 	// TODO: perform topological sort of cyclic call graph
 }
 
-int zend_build_call_graph(zend_arena **arena, zend_script *script, uint32_t build_flags, zend_call_graph *call_graph) /* {{{ */
+int zend_build_call_graph(zend_arena **arena, zend_script *script, zend_call_graph *call_graph) /* {{{ */
 {
-	int i;
-
 	call_graph->op_arrays_count = 0;
 	if (zend_foreach_op_array(call_graph, script, zend_op_array_calc) != SUCCESS) {
 		return FAILURE;
@@ -262,17 +268,24 @@ int zend_build_call_graph(zend_arena **arena, zend_script *script, uint32_t buil
 	if (zend_foreach_op_array(call_graph, script, zend_op_array_collect) != SUCCESS) {
 		return FAILURE;
 	}
-	for (i = 0; i < call_graph->op_arrays_count; i++) {
-		zend_analyze_calls(arena, script, build_flags, call_graph->op_arrays[i], call_graph->func_infos + i);
-	}
-	zend_analyze_recursion(call_graph);
-	zend_sort_op_arrays(call_graph);
 
 	return SUCCESS;
 }
 /* }}} */
 
-zend_call_info **zend_build_call_map(zend_arena **arena, zend_func_info *info, zend_op_array *op_array) /* {{{ */
+void zend_analyze_call_graph(zend_arena **arena, zend_script *script, zend_call_graph *call_graph) /* {{{ */
+{
+	int i;
+
+	for (i = 0; i < call_graph->op_arrays_count; i++) {
+		zend_analyze_calls(arena, script, 0, call_graph->op_arrays[i], call_graph->func_infos + i);
+	}
+	zend_analyze_recursion(call_graph);
+	zend_sort_op_arrays(call_graph);
+}
+/* }}} */
+
+zend_call_info **zend_build_call_map(zend_arena **arena, zend_func_info *info, const zend_op_array *op_array) /* {{{ */
 {
 	zend_call_info **map, *call;
 	if (!info->callee_info) {
@@ -284,7 +297,9 @@ zend_call_info **zend_build_call_map(zend_arena **arena, zend_func_info *info, z
 	for (call = info->callee_info; call; call = call->next_callee) {
 		int i;
 		map[call->caller_init_opline - op_array->opcodes] = call;
-		map[call->caller_call_opline - op_array->opcodes] = call;
+		if (call->caller_call_opline) {
+			map[call->caller_call_opline - op_array->opcodes] = call;
+		}
 		for (i = 0; i < call->num_args; i++) {
 			if (call->arg_info[i].opline) {
 				map[call->arg_info[i].opline - op_array->opcodes] = call;
@@ -294,11 +309,3 @@ zend_call_info **zend_build_call_map(zend_arena **arena, zend_func_info *info, z
 	return map;
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- */

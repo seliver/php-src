@@ -34,7 +34,7 @@ $args_array = array(
 );
 
 /* creating dumping file */
-$data_file = dirname(__FILE__) . '/vfprintf_variation17.txt';
+$data_file = __DIR__ . '/vfprintf_variation17.txt';
 if (!($fp = fopen($data_file, 'wt')))
    return;
 
@@ -53,7 +53,6 @@ echo "\n";
 
 unlink($data_file);
 ?>
-===DONE===
 --EXPECT--
 *** Testing vfprintf() : scientific formats and scientific values ***
 
@@ -67,4 +66,3 @@ unlink($data_file);
 #########1.000000e+1 1.000000e+2 $$$$$$$$-1.000000e+3 _________1.000000e+2
 -- Iteration 5 --
 1.000000e+3 2.000000e+3 3.000000e+3 4.000000e+3
-===DONE===

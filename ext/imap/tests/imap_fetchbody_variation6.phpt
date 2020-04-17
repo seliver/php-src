@@ -2,7 +2,7 @@
 Test imap_fetchbody() function : usage variations - $msg_no arg
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -18,7 +18,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
 
 echo "*** Testing imap_fetchbody() : usage variations ***\n";
 
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 //Initialise required variables
 $stream_id = setup_test_mailbox('', 3); // set up temp mailbox with  simple msgs
@@ -29,17 +29,16 @@ $sequences = array (0,     4, // out of range
                    );
 
 foreach($sequences as $msg_no) {
-	echo "\n-- \$msg_no is $msg_no --\n";
-	var_dump($overview = imap_fetchbody($stream_id, $msg_no, $section));
-	if (!$overview) {
-		echo imap_last_error() . "\n";
-	}
+    echo "\n-- \$msg_no is $msg_no --\n";
+    var_dump($overview = imap_fetchbody($stream_id, $msg_no, $section));
+    if (!$overview) {
+        echo imap_last_error() . "\n";
+    }
 }
 ?>
-===DONE===
 --CLEAN--
 <?php
-require_once(dirname(__FILE__).'/clean.inc');
+require_once(__DIR__.'/clean.inc');
 ?>
 --EXPECTF--
 *** Testing imap_fetchbody() : usage variations ***
@@ -67,4 +66,3 @@ string(%d) "1: this is a test message, please ignore%a"
 
 Notice: A non well formed numeric value encountered in %s on line %d
 string(%d) "1: this is a test message, please ignore%a"
-===DONE===

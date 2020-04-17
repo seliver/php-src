@@ -38,7 +38,7 @@ $args_array = array(
 );
 
 /* creating dumping file */
-$data_file = dirname(__FILE__) . '/vfprintf_variation15.txt';
+$data_file = __DIR__ . '/vfprintf_variation15.txt';
 if (!($fp = fopen($data_file, 'wt')))
    return;
 
@@ -58,7 +58,6 @@ echo "\n";
 unlink($data_file);
 
 ?>
-===DONE===
 --EXPECT--
 *** Testing vfprintf() : unsigned formats and unsigned values ***
 
@@ -72,4 +71,3 @@ unlink($data_file);
 #1 0 $0 10
 -- Iteration 5 --
 1 2 3 4
-===DONE===

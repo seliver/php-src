@@ -8,7 +8,7 @@ if (!extension_loaded("zlib")) {
 ?>
 --FILE--
 <?php
-$f = "temp2.txt.gz";
+$f = "gzrewind_variation1.txt.gz";
 $h = gzopen($f, 'w');
 gzwrite($h, 'The first string.');
 var_dump(gzrewind($h));
@@ -21,8 +21,6 @@ gzclose($h);
 unlink($f);
 echo "\n";
 ?>
-===DONE===
 --EXPECT--
 bool(false)
 The first string.The second string.
-===DONE===

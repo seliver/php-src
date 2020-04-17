@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) Zend Technologies Ltd. (http://www.zend.com)           |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -27,21 +27,21 @@
 #include "zend.h"
 
 #ifndef ZEND_MM_ALIGNMENT
-# define ZEND_MM_ALIGNMENT Z_L(8)
+# define ZEND_MM_ALIGNMENT Z_UL(8)
 # define ZEND_MM_ALIGNMENT_LOG2 Z_L(3)
 #elif ZEND_MM_ALIGNMENT < 4
 # undef ZEND_MM_ALIGNMENT
 # undef ZEND_MM_ALIGNMENT_LOG2
-# define ZEND_MM_ALIGNMENT Z_L(4)
+# define ZEND_MM_ALIGNMENT Z_UL(4)
 # define ZEND_MM_ALIGNMENT_LOG2 Z_L(2)
 #endif
 
-#define ZEND_MM_ALIGNMENT_MASK ~(ZEND_MM_ALIGNMENT - Z_L(1))
+#define ZEND_MM_ALIGNMENT_MASK ~(ZEND_MM_ALIGNMENT - 1)
 
-#define ZEND_MM_ALIGNED_SIZE(size)	(((size) + ZEND_MM_ALIGNMENT - Z_L(1)) & ZEND_MM_ALIGNMENT_MASK)
+#define ZEND_MM_ALIGNED_SIZE(size)	(((size) + ZEND_MM_ALIGNMENT - 1) & ZEND_MM_ALIGNMENT_MASK)
 
 #define ZEND_MM_ALIGNED_SIZE_EX(size, alignment) \
-	(((size) + ((alignment) - Z_L(1))) & ~((alignment) - Z_L(1)))
+	(((size) + ((alignment) - 1)) & ~((alignment) - 1))
 
 typedef struct _zend_leak_info {
 	void *addr;
@@ -398,16 +398,10 @@ static void apc_init_heap(void)
 
 */
 
+#ifdef ZTS
+size_t zend_mm_globals_size(void);
+#endif
+
 END_EXTERN_C()
 
 #endif
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

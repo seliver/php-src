@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -26,14 +24,10 @@
 #include "url.h"
 #include "file.h"
 #ifdef _OSD_POSIX
-#ifndef APACHE
-#error On this EBCDIC platform, PHP is only supported as an Apache module.
-#else /*APACHE*/
-#ifndef CHARSET_EBCDIC
-#define CHARSET_EBCDIC /* this machine uses EBCDIC, not ASCII! */
-#endif
-#include "ebcdic.h"
-#endif /*APACHE*/
+# ifndef CHARSET_EBCDIC
+#  define CHARSET_EBCDIC /* this machine uses EBCDIC, not ASCII! */
+# endif
+# include "ebcdic.h"
 #endif /*_OSD_POSIX*/
 
 /* {{{ free_url
@@ -297,6 +291,8 @@ PHPAPI php_url *php_url_parse_ex(char const *str, size_t length)
 		if (p < e) {
 			ret->fragment = zend_string_init(p, (e - p), 0);
 			php_replace_controlchars_ex(ZSTR_VAL(ret->fragment), ZSTR_LEN(ret->fragment));
+		} else {
+			ret->fragment = ZSTR_EMPTY_ALLOC();
 		}
 		e = p-1;
 	}
@@ -307,6 +303,8 @@ PHPAPI php_url *php_url_parse_ex(char const *str, size_t length)
 		if (p < e) {
 			ret->query = zend_string_init(p, (e - p), 0);
 			php_replace_controlchars_ex(ZSTR_VAL(ret->query), ZSTR_LEN(ret->query));
+		} else {
+			ret->query = ZSTR_EMPTY_ALLOC();
 		}
 		e = p-1;
 	}
@@ -369,8 +367,8 @@ PHP_FUNCTION(parse_url)
 				if (resource->fragment != NULL) RETVAL_STR_COPY(resource->fragment);
 				break;
 			default:
-				php_error_docref(NULL, E_WARNING, "Invalid URL component identifier " ZEND_LONG_FMT, key);
-				RETVAL_FALSE;
+				zend_argument_value_error(2, "must be a valid URL component identifier, " ZEND_LONG_FMT " given", key);
+				break;
 		}
 		goto done;
 	}
@@ -547,7 +545,7 @@ PHPAPI size_t php_url_decode(char *str, size_t len)
 #ifndef CHARSET_EBCDIC
 			*dest = (char) php_htoi(data + 1);
 #else
-			*dest = os_toebcdic[(char) php_htoi(data + 1)];
+			*dest = os_toebcdic[(unsigned char) php_htoi(data + 1)];
 #endif
 			data += 2;
 			len -= 2;
@@ -643,7 +641,7 @@ PHPAPI size_t php_raw_url_decode(char *str, size_t len)
 #ifndef CHARSET_EBCDIC
 			*dest = (char) php_htoi(data + 1);
 #else
-			*dest = os_toebcdic[(char) php_htoi(data + 1)];
+			*dest = os_toebcdic[(unsigned char) php_htoi(data + 1)];
 #endif
 			data += 2;
 			len -= 2;
@@ -658,7 +656,7 @@ PHPAPI size_t php_raw_url_decode(char *str, size_t len)
 }
 /* }}} */
 
-/* {{{ proto array get_headers(string url[, int format[, resource context]])
+/* {{{ proto array|false get_headers(string url[, int format[, resource context]])
    fetches all the headers sent by the server in response to a HTTP request */
 PHP_FUNCTION(get_headers)
 {
@@ -671,10 +669,10 @@ PHP_FUNCTION(get_headers)
 	php_stream_context *context;
 
 	ZEND_PARSE_PARAMETERS_START(1, 3)
-		Z_PARAM_STRING(url, url_len)
+		Z_PARAM_PATH(url, url_len)
 		Z_PARAM_OPTIONAL
 		Z_PARAM_LONG(format)
-		Z_PARAM_RESOURCE_EX(zcontext, 1, 0)
+		Z_PARAM_RESOURCE_OR_NULL(zcontext)
 	ZEND_PARSE_PARAMETERS_END();
 
 	context = php_stream_context_from_zval(zcontext, 0);
@@ -726,12 +724,3 @@ no_name_header:
 	php_stream_close(stream);
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

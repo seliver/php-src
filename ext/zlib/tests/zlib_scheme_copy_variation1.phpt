@@ -8,7 +8,7 @@ if (!extension_loaded("zlib")) {
 ?>
 --FILE--
 <?php
-$inputFileName = dirname(__FILE__)."/004.txt.gz";
+$inputFileName = __DIR__."/004.txt.gz";
 $outputFileName = __FILE__.'.tmp';
 
 $srcFile = "compress.zlib://$inputFileName";
@@ -32,7 +32,5 @@ else {
 }
 unlink($outputFileName);
 ?>
-===DONE===
 --EXPECT--
 OK: Copy identical
-===DONE===

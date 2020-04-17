@@ -9,7 +9,7 @@ mbstring.language=Japanese
 <?php
 // TODO: Add more tests
 //$debug = true; // Uncomment this line to view error/warning/notice message in *.out file
-ini_set('include_path', dirname(__FILE__));
+ini_set('include_path', __DIR__);
 include_once('common.inc');
 
 // SJIS string (BASE64 encoded)
@@ -72,34 +72,34 @@ print("{$aa[0]}{$aa[1]}{$aa[2]}\n"); // Converted to EUC-JP
 echo "== OBJECT TEST ==\n";
 class foo
 {
-	public $s1;
-	public $s2;
-	public $s3;
+    public $s1;
+    public $s2;
+    public $s3;
 
-	function __construct()
-	{
-		global $sjis, $jis, $euc_jp;
+    function __construct()
+    {
+        global $sjis, $jis, $euc_jp;
 
-		$this->s1 = $euc_jp;
-		$this->s2 = $euc_jp;
-		$this->s3 = $euc_jp;
-	}
+        $this->s1 = $euc_jp;
+        $this->s2 = $euc_jp;
+        $this->s3 = $euc_jp;
+    }
 }
 
 class bar
 {
-	public $s1;
-	public $s2;
-	public $s3;
+    public $s1;
+    public $s2;
+    public $s3;
 
-	function __construct()
-	{
-		global $sjis, $jis, $euc_jp;
+    function __construct()
+    {
+        global $sjis, $jis, $euc_jp;
 
-		$this->s1 = $euc_jp;
-		$this->s2 = $euc_jp;
-		$this->s3 = $euc_jp;
-	}
+        $this->s1 = $euc_jp;
+        $this->s2 = $euc_jp;
+        $this->s3 = $euc_jp;
+    }
 }
 
 

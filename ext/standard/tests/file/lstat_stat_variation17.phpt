@@ -18,7 +18,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 
 /* test the effects on stats by changing permissions of a dir */
 
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 require "$file_path/file.inc";
 
 // checking stat() on directory
@@ -27,7 +27,7 @@ $dirname = "$file_path/lstat_stat_variation17";
 mkdir($dirname);
 
 $old_stat = stat($dirname);
-sleep(2);
+sleep(1);
 var_dump( chmod($dirname, 0777) );
 // clear the stat
 clearstatcache();
@@ -43,7 +43,7 @@ echo "\n--- Done ---";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 rmdir("$file_path/lstat_stat_variation17");
 ?>
 --EXPECT--

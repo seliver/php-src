@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -32,8 +30,5 @@ PHPAPI void PHP_SHA1Init(PHP_SHA1_CTX *);
 PHPAPI void PHP_SHA1Update(PHP_SHA1_CTX *, const unsigned char *, size_t);
 PHPAPI void PHP_SHA1Final(unsigned char[20], PHP_SHA1_CTX *);
 PHPAPI void make_sha1_digest(char *sha1str, unsigned char *digest);
-
-PHP_FUNCTION(sha1);
-PHP_FUNCTION(sha1_file);
 
 #endif

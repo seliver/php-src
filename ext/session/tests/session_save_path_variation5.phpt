@@ -20,14 +20,14 @@ ob_start();
  */
 
 echo "*** Testing session_save_path() : variation ***\n";
-$directory = dirname(__FILE__);
+$directory = __DIR__;
 $sessions = ($directory."/sessions");
 
 chdir($directory);
 ini_set('open_basedir', '.');
 // Delete the existing directory
 if (file_exists($sessions) === TRUE) {
-	@rmdir($sessions);
+    @rmdir($sessions);
 }
 
 var_dump(mkdir($sessions));
@@ -40,7 +40,7 @@ echo "Done";
 ob_end_flush();
 ?>
 --CLEAN--
-$directory = dirname(__FILE__);
+$directory = __DIR__;
 $sessions = ($directory."/sessions");
 var_dump(rmdir($sessions));
 --EXPECTF--

@@ -8,7 +8,7 @@ if (!extension_loaded("zlib")) {
 ?>
 --FILE--
 <?php
-$f = dirname(__FILE__)."/004.txt.gz";
+$f = __DIR__."/004.txt.gz";
 $h = gzopen($f, 'r');
 echo "test rewind before doing anything\n";
 var_dump(gzrewind($h));
@@ -22,7 +22,6 @@ gzrewind($h);
 echo "first 20 characters=".gzread($h, 20)."\n";
 gzclose($h);
 ?>
-===DONE===
 --EXPECT--
 test rewind before doing anything
 bool(true)
@@ -33,4 +32,3 @@ int(30)
 int(0)
 first 10 characters=When you'r
 first 20 characters=When you're taught t
-===DONE===

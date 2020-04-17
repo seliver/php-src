@@ -2,7 +2,7 @@
 Test imap_fetch_overview() function : basic functionality
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -14,7 +14,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
 
 echo "*** Testing imap_fetch_overview() : basic functionality ***\n";
 
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 // create a new mailbox and add two new messages to it
 $stream_id = setup_test_mailbox('', 2, $mailbox, 'notSimple');
@@ -44,10 +44,9 @@ displayOverviewFields($a[1]);
 imap_close($stream_id);
 
 ?>
-===DONE===
 --CLEAN--
 <?php
-require_once(dirname(__FILE__).'/clean.inc');
+require_once(__DIR__.'/clean.inc');
 ?>
 --EXPECTF--
 *** Testing imap_fetch_overview() : basic functionality ***
@@ -93,4 +92,3 @@ deleted is 0
 seen is 0
 draft is 0
 udate is OK
-===DONE===

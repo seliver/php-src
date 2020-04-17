@@ -20,7 +20,7 @@ if(!function_exists('imagecolorstotal') || !function_exists('imagecreatefromgif'
 echo "*** Testing imagecolorstotal() : basic functionality ***\n";
 
 // Get an image
-$gif = dirname(__FILE__)."/php.gif";
+$gif = __DIR__."/php.gif";
 $im = imagecreatefromgif($gif);
 
 echo 'Total colors in image: ' . imagecolorstotal($im);
@@ -29,8 +29,6 @@ echo 'Total colors in image: ' . imagecolorstotal($im);
 imagedestroy($im);
 ?>
 
-===DONE===
 --EXPECT--
 *** Testing imagecolorstotal() : basic functionality ***
 Total colors in image: 128
-===DONE===

@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -370,9 +368,9 @@ SAPI_API SAPI_POST_HANDLER_FUNC(php_std_post_handler)
 
 		while (!php_stream_eof(s)) {
 			char buf[SAPI_POST_HANDLER_BUFSIZ] = {0};
-			size_t len = php_stream_read(s, buf, SAPI_POST_HANDLER_BUFSIZ);
+			ssize_t len = php_stream_read(s, buf, SAPI_POST_HANDLER_BUFSIZ);
 
-			if (len && len != (size_t) -1) {
+			if (len > 0) {
 				smart_str_appendl(&post_data.str, buf, len);
 
 				if (SUCCESS != add_post_vars(arr, &post_data, 0)) {
@@ -479,6 +477,9 @@ SAPI_API SAPI_TREAT_DATA_FUNC(php_default_treat_data)
 	var = php_strtok_r(res, separator, &strtok_buf);
 
 	while (var) {
+		size_t val_len;
+		size_t new_val_len;
+
 		val = strchr(var, '=');
 
 		if (arg == PARSE_COOKIE) {
@@ -497,29 +498,25 @@ SAPI_API SAPI_TREAT_DATA_FUNC(php_default_treat_data)
 		}
 
 		if (val) { /* have a value */
-			size_t val_len;
-			size_t new_val_len;
 
 			*val++ = '\0';
-			php_url_decode(var, strlen(var));
-			val_len = php_url_decode(val, strlen(val));
-			val = estrndup(val, val_len);
-			if (sapi_module.input_filter(arg, var, &val, val_len, &new_val_len)) {
-				php_register_variable_safe(var, val, new_val_len, &array);
-			}
-			efree(val);
-		} else {
-			size_t val_len;
-			size_t new_val_len;
 
-			php_url_decode(var, strlen(var));
-			val_len = 0;
-			val = estrndup("", val_len);
-			if (sapi_module.input_filter(arg, var, &val, val_len, &new_val_len)) {
-				php_register_variable_safe(var, val, new_val_len, &array);
+			if (arg == PARSE_COOKIE) {
+				val_len = php_raw_url_decode(val, strlen(val));
+			} else {
+				val_len = php_url_decode(val, strlen(val));
 			}
-			efree(val);
+		} else {
+			val     = "";
+			val_len =  0;
 		}
+
+		val = estrndup(val, val_len);
+		php_url_decode(var, strlen(var));
+		if (sapi_module.input_filter(arg, var, &val, val_len, &new_val_len)) {
+			php_register_variable_safe(var, val, new_val_len, &array);
+		}
+		efree(val);
 next_cookie:
 		var = php_strtok_r(NULL, separator, &strtok_buf);
 	}
@@ -541,37 +538,54 @@ static zend_always_inline int valid_environment_name(const char *name, const cha
 	return 1;
 }
 
-void _php_import_environment_variables(zval *array_ptr)
+static zend_always_inline void import_environment_variable(HashTable *ht, char *env)
 {
-	char **env, *p;
+	char *p;
 	size_t name_len, len;
 	zval val;
 	zend_ulong idx;
 
-	for (env = environ; env != NULL && *env != NULL; env++) {
-		p = strchr(*env, '=');
-		if (!p
-		 || p == *env
-		 || !valid_environment_name(*env, p)) {
-			/* malformed entry? */
-			continue;
-		}
-		name_len = p - *env;
-		p++;
-		len = strlen(p);
-		if (len == 0) {
-			ZVAL_EMPTY_STRING(&val);
-		} else if (len == 1) {
-			ZVAL_INTERNED_STR(&val, ZSTR_CHAR((zend_uchar)*p));
-		} else {
-			ZVAL_NEW_STR(&val, zend_string_init(p, len, 0));
-		}
-		if (ZEND_HANDLE_NUMERIC_STR(*env, name_len, idx)) {
-			zend_hash_index_update(Z_ARRVAL_P(array_ptr), idx, &val);
-		} else {
-			php_register_variable_quick(*env, name_len, &val, Z_ARRVAL_P(array_ptr));
-		}
+	p = strchr(env, '=');
+	if (!p
+		|| p == env
+		|| !valid_environment_name(env, p)) {
+		/* malformed entry? */
+		return;
 	}
+	name_len = p - env;
+	p++;
+	len = strlen(p);
+	if (len == 0) {
+		ZVAL_EMPTY_STRING(&val);
+	} else if (len == 1) {
+		ZVAL_INTERNED_STR(&val, ZSTR_CHAR((zend_uchar)*p));
+	} else {
+		ZVAL_NEW_STR(&val, zend_string_init(p, len, 0));
+	}
+	if (ZEND_HANDLE_NUMERIC_STR(env, name_len, idx)) {
+		zend_hash_index_update(ht, idx, &val);
+	} else {
+		php_register_variable_quick(env, name_len, &val, ht);
+	}
+}
+
+void _php_import_environment_variables(zval *array_ptr)
+{
+	tsrm_env_lock();
+
+#ifndef PHP_WIN32
+	for (char **env = environ; env != NULL && *env != NULL; env++) {
+		import_environment_variable(Z_ARRVAL_P(array_ptr), *env);
+	}
+#else
+	char *environment = GetEnvironmentStringsA();
+	for (char *env = environment; env != NULL && *env; env += strlen(env) + 1) {
+		import_environment_variable(Z_ARRVAL_P(array_ptr), env);
+	}
+	FreeEnvironmentStringsA(environment);
+#endif
+
+	tsrm_env_unlock();
 }
 
 zend_bool php_std_auto_global_callback(char *name, uint32_t name_len)
@@ -915,12 +929,3 @@ void php_startup_auto_globals(void)
 	zend_register_auto_global(zend_string_init_interned("_REQUEST", sizeof("_REQUEST")-1, 1), PG(auto_globals_jit), php_auto_globals_create_request);
 	zend_register_auto_global(zend_string_init_interned("_FILES", sizeof("_FILES")-1, 1), 0, php_auto_globals_create_files);
 }
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

@@ -13,10 +13,9 @@ echo "*** Testing hash_algos() : basic functionality ***\n";
 var_dump(hash_algos());
 
 ?>
-===Done===
 --EXPECTF--
 *** Testing hash_algos() : basic functionality ***
-array(52) {
+array(53) {
   [%d]=>
   string(3) "md2"
   [%d]=>
@@ -82,6 +81,8 @@ array(52) {
   [%d]=>
   string(6) "crc32b"
   [%d]=>
+  string(6) "crc32c"
+  [%d]=>
   string(6) "fnv132"
   [%d]=>
   string(7) "fnv1a32"
@@ -122,4 +123,3 @@ array(52) {
   [%d]=>
   string(10) "haval256,5"
 }
-===Done===

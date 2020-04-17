@@ -7,7 +7,6 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
     die('skip.. Not valid for Windows');
 }
 ?>
-?>
 --FILE--
 <?php
 /* Prototype: array lstat ( string $filename );
@@ -19,7 +18,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 
 /* test the effects of touch() on stats of dir */
 
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 require "$file_path/file.inc";
 
 
@@ -34,7 +33,7 @@ echo "*** Testing stat() for directory after using touch() on the directory ***\
 $old_stat = stat($dir_name);
 // clear the cache
 clearstatcache();
-sleep(2);
+sleep(1);
 var_dump( touch($dir_name) );
 $new_stat = stat($dir_name);
 
@@ -52,7 +51,7 @@ echo "\n--- Done ---";
 ?>
 --CLEAN--
 <?php
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 rmdir("$file_path/lstat_stat_variation5");
 ?>
 --EXPECT--

@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | phar:// stream wrapper support                                       |
   +----------------------------------------------------------------------+
-  | Copyright (c) 2005-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -89,7 +89,7 @@ static int phar_dir_seek(php_stream *stream, zend_off_t offset, int whence, zend
 /**
  * Used for readdir() on an opendir()ed phar directory handle
  */
-static size_t phar_dir_read(php_stream *stream, char *buf, size_t count) /* {{{ */
+static ssize_t phar_dir_read(php_stream *stream, char *buf, size_t count) /* {{{ */
 {
 	size_t to_read;
 	HashTable *data = (HashTable *)stream->abstract;
@@ -118,9 +118,9 @@ static size_t phar_dir_read(php_stream *stream, char *buf, size_t count) /* {{{ 
 /**
  * Dummy: Used for writing to a phar directory (i.e. not used)
  */
-static size_t phar_dir_write(php_stream *stream, const char *buf, size_t count) /* {{{ */
+static ssize_t phar_dir_write(php_stream *stream, const char *buf, size_t count) /* {{{ */
 {
-	return 0;
+	return -1;
 }
 /* }}} */
 
@@ -152,23 +152,11 @@ static int phar_add_empty(HashTable *ht, char *arKey, uint32_t nKeyLength)  /* {
 /**
  * Used for sorting directories alphabetically
  */
-static int phar_compare_dir_name(const void *a, const void *b)  /* {{{ */
+static int phar_compare_dir_name(Bucket *f, Bucket *s)  /* {{{ */
 {
-	Bucket *f;
-	Bucket *s;
-	int result;
-
-	f = (Bucket *) a;
-	s = (Bucket *) b;
-	result = zend_binary_strcmp(ZSTR_VAL(f->key), ZSTR_LEN(f->key), ZSTR_VAL(s->key), ZSTR_LEN(s->key));
-
-	if (result < 0) {
-		return -1;
-	} else if (result > 0) {
-		return 1;
-	} else {
-		return 0;
-	}
+	int result = zend_binary_strcmp(
+		ZSTR_VAL(f->key), ZSTR_LEN(f->key), ZSTR_VAL(s->key), ZSTR_LEN(s->key));
+	return ZEND_NORMALIZE_BOOL(result);
 }
 /* }}} */
 
@@ -285,10 +273,7 @@ PHAR_ADD_ENTRY:
 
 	if (FAILURE != zend_hash_has_more_elements(data)) {
 		efree(dir);
-		if (zend_hash_sort(data, phar_compare_dir_name, 0) == FAILURE) {
-			FREE_HASHTABLE(data);
-			return NULL;
-		}
+		zend_hash_sort(data, phar_compare_dir_name, 0);
 		return php_stream_alloc(&phar_dir_ops, data, NULL, "r");
 	} else {
 		efree(dir);
@@ -666,12 +651,3 @@ int phar_wrapper_rmdir(php_stream_wrapper *wrapper, const char *url, int options
 	return 1;
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

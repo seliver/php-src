@@ -1,7 +1,5 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
    | available through the world-wide-web at the following url:           |
@@ -25,7 +23,6 @@
 
 #include "formatter_class.h"
 #include "formatter_format.h"
-#include "formatter_parse.h"
 #include "intl_convert.h"
 
 #define ICU_LOCALE_BUG 1
@@ -54,10 +51,7 @@ PHP_FUNCTION( numfmt_parse )
 	if( zend_parse_method_parameters( ZEND_NUM_ARGS(), getThis(), "Os|lz!",
 		&object, NumberFormatter_ce_ptr,  &str, &str_len, &type, &zposition ) == FAILURE )
 	{
-		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
-			"number_parse: unable to parse input params", 0 );
-
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	if(zposition) {
@@ -105,7 +99,7 @@ PHP_FUNCTION( numfmt_parse )
 	efree(oldlocale);
 #endif
 	if(zposition) {
-		ZEND_TRY_ASSIGN_LONG(zposition, position);
+		ZEND_TRY_ASSIGN_REF_LONG(zposition, position);
 	}
 
 	if (sstr) {
@@ -139,10 +133,7 @@ PHP_FUNCTION( numfmt_parse_currency )
 	if( zend_parse_method_parameters( ZEND_NUM_ARGS(), getThis(), "Osz/|z!",
 		&object, NumberFormatter_ce_ptr,  &str, &str_len, &zcurrency, &zposition ) == FAILURE )
 	{
-		intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
-			"number_parse_currency: unable to parse input params", 0 );
-
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	/* Fetch the object. */
@@ -159,7 +150,7 @@ PHP_FUNCTION( numfmt_parse_currency )
 
 	number = unum_parseDoubleCurrency(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, currency, &INTL_DATA_ERROR_CODE(nfo));
 	if(zposition) {
-		ZEND_TRY_ASSIGN_LONG(zposition, position);
+		ZEND_TRY_ASSIGN_REF_LONG(zposition, position);
 	}
 	if (sstr) {
 		efree(sstr);
@@ -175,12 +166,3 @@ PHP_FUNCTION( numfmt_parse_currency )
 	RETVAL_DOUBLE( number );
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

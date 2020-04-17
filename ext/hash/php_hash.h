@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -91,6 +89,7 @@ extern const php_hash_ops php_hash_gost_crypto_ops;
 extern const php_hash_ops php_hash_adler32_ops;
 extern const php_hash_ops php_hash_crc32_ops;
 extern const php_hash_ops php_hash_crc32b_ops;
+extern const php_hash_ops php_hash_crc32c_ops;
 extern const php_hash_ops php_hash_fnv132_ops;
 extern const php_hash_ops php_hash_fnv1a32_ops;
 extern const php_hash_ops php_hash_fnv164_ops;
@@ -128,22 +127,8 @@ extern zend_module_entry hash_module_entry;
 #	define PHP_HASH_API
 #endif
 
-PHP_FUNCTION(hash);
-PHP_FUNCTION(hash_file);
-PHP_FUNCTION(hash_hkdf);
-PHP_FUNCTION(hash_hmac);
-PHP_FUNCTION(hash_hmac_file);
-PHP_FUNCTION(hash_init);
-PHP_FUNCTION(hash_update);
-PHP_FUNCTION(hash_update_stream);
-PHP_FUNCTION(hash_update_file);
-PHP_FUNCTION(hash_final);
-PHP_FUNCTION(hash_algos);
-PHP_FUNCTION(hash_pbkdf2);
-PHP_FUNCTION(hash_equals);
-
 extern PHP_HASH_API zend_class_entry *php_hashcontext_ce;
-PHP_HASH_API const php_hash_ops *php_hash_fetch_ops(const char *algo, size_t algo_len);
+PHP_HASH_API const php_hash_ops *php_hash_fetch_ops(zend_string *algo);
 PHP_HASH_API void php_hash_register_algo(const char *algo, const php_hash_ops *ops);
 PHP_HASH_API int php_hash_copy(const void *ops, void *orig_context, void *dest_context);
 
@@ -159,13 +144,3 @@ static inline void php_hash_bin2hex(char *out, const unsigned char *in, size_t i
 }
 
 #endif	/* PHP_HASH_H */
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

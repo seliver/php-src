@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -1540,7 +1538,7 @@ sb4 php_oci_error(OCIError *err_p, sword errstatus)
 			if (errcode) {
 				php_error_docref(NULL, E_WARNING, "%s", errbuf);
 			} else {
-				php_error_docref(NULL, E_WARNING, "failed to fetch error message");
+				php_error_docref(NULL, E_WARNING, "Failed to fetch error message");
 			}
 			break;
 		case OCI_INVALID_HANDLE:
@@ -3467,12 +3465,3 @@ void php_oci_dtrace_check_connection(php_oci_connection *connection, sb4 errcode
 /* }}} */
 
 #endif /* HAVE_OCI8 */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

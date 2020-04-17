@@ -11,7 +11,7 @@ echo "*** Testing sprintf() : hexa formats with resource values ***\n";
 
 // resource type variable
 $fp = fopen (__FILE__, "r");
-$dfp = opendir ( dirname(__FILE__) );
+$dfp = opendir ( __DIR__ );
 
 // array of resource types
 $resource_values = array (
@@ -42,7 +42,6 @@ fclose($fp);
 closedir($dfp);
 
 ?>
-===DONE===
 --EXPECTF--
 *** Testing sprintf() : hexa formats with resource values ***
 
@@ -75,4 +74,3 @@ string(4) "%a"
 string(30) "%a"
 string(10) "0-9A-Fa-f]"
 string(1) "x"
-===DONE===

@@ -4,7 +4,7 @@ openssl_x509_export() tests
 <?php if (!extension_loaded("openssl")) print "skip"; ?>
 --FILE--
 <?php
-$cert_file = dirname(__FILE__) . "/cert.crt";
+$cert_file = __DIR__ . "/cert.crt";
 
 $a = file_get_contents($cert_file);
 $b = "file://" . $cert_file;
@@ -32,11 +32,11 @@ var_dump(strcmp($output, $output5)); // different
 bool(true)
 bool(true)
 
-Warning: openssl_x509_export(): cannot get cert from parameter 1 in %s on line %d
+Warning: openssl_x509_export(): Cannot get cert from parameter 1 in %s on line %d
 bool(false)
 bool(true)
 
-Warning: openssl_x509_export(): cannot get cert from parameter 1 in %s on line %d
+Warning: openssl_x509_export(): Cannot get cert from parameter 1 in %s on line %d
 bool(false)
 int(0)
 int(0)

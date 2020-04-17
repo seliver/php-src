@@ -8,12 +8,10 @@ if (!extension_loaded("zlib")) {
 ?>
 --FILE--
 <?php
-$f = dirname(__FILE__)."/004.txt.gz";
+$f = __DIR__."/004.txt.gz";
 $h = gzopen($f, "r");
 var_dump(fstat($h));
 fclose($h);
 ?>
-===DONE===
 --EXPECT--
 bool(false)
-===DONE===

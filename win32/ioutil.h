@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -86,6 +84,11 @@ typedef unsigned short mode_t;
 #endif
 #ifndef F_OK
 #define F_OK 0x00
+#endif
+
+/* from ntifs.h */
+#ifndef SYMLINK_FLAG_RELATIVE
+#define SYMLINK_FLAG_RELATIVE 0x01
 #endif
 
 typedef struct {
@@ -215,8 +218,16 @@ __forceinline static wchar_t *php_win32_ioutil_conv_any_to_w(const char* in, siz
 			memmove(ret, mb, mb_len * sizeof(wchar_t));
 			ret[mb_len] = L'\0';
 		} else {
+			wchar_t *src = mb, *dst = ret + PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW;
 			memmove(ret, PHP_WIN32_IOUTIL_LONG_PATH_PREFIXW, PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW * sizeof(wchar_t));
-			memmove(ret+PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW, mb, mb_len * sizeof(wchar_t));
+			while (src < mb + mb_len) {
+				if (*src == PHP_WIN32_IOUTIL_FW_SLASHW) {
+					*dst++ = PHP_WIN32_IOUTIL_DEFAULT_SLASHW;
+					src++;
+				} else {
+					*dst++ = *src++;
+				}
+			}
 			ret[mb_len + PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW] = L'\0';
 
 			mb_len += PHP_WIN32_IOUTIL_LONG_PATH_PREFIX_LENW;
@@ -619,7 +630,6 @@ __forceinline static int php_win32_ioutil_link(const char *target, const char *l
 	return ret;
 }/*}}}*/
 
-#define HAVE_REALPATH 1
 PW32IO char *realpath(const char *path, char *resolved);
 
 __forceinline static char *php_win32_ioutil_realpath_ex0(const char *path, char *resolved, PBY_HANDLE_FILE_INFORMATION info)
@@ -792,12 +802,3 @@ __forceinline static ssize_t php_win32_ioutil_readlink(const char *path, char *b
 #endif
 
 #endif /* PHP_WIN32_IOUTIL_H */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

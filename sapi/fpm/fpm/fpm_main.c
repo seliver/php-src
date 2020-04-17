@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -43,13 +41,9 @@
 # include <unistd.h>
 #endif
 
-#if HAVE_SIGNAL_H
-# include <signal.h>
-#endif
+#include <signal.h>
 
-#if HAVE_SETLOCALE
-# include <locale.h>
-#endif
+#include <locale.h>
 
 #if HAVE_SYS_TYPES_H
 # include <sys/types.h>
@@ -90,6 +84,8 @@ int __riscosify_control = __RISCOSIFY_STRICT_UNIX_SPECS;
 #include "fpm.h"
 #include "fpm_request.h"
 #include "fpm_status.h"
+#include "fpm_signals.h"
+#include "fpm_stdio.h"
 #include "fpm_conf.h"
 #include "fpm_php.h"
 #include "fpm_log.h"
@@ -182,17 +178,14 @@ static void user_config_cache_entry_dtor(zval *el)
 
 #ifdef ZTS
 static int php_cgi_globals_id;
-#define CGIG(v) TSRMG(php_cgi_globals_id, php_cgi_globals_struct *, v)
+#define CGIG(v) ZEND_TSRMG(php_cgi_globals_id, php_cgi_globals_struct *, v)
 #else
 static php_cgi_globals_struct php_cgi_globals;
 #define CGIG(v) (php_cgi_globals.v)
 #endif
 
-static int module_name_cmp(const void *a, const void *b) /* {{{ */
+static int module_name_cmp(Bucket *f, Bucket *s) /* {{{ */
 {
-	Bucket *f = (Bucket *) a;
-	Bucket *s = (Bucket *) b;
-
 	return strcasecmp(	((zend_module_entry *) Z_PTR(f->val))->name,
 						((zend_module_entry *) Z_PTR(s->val))->name);
 }
@@ -213,10 +206,9 @@ static void print_modules(void) /* {{{ */
 }
 /* }}} */
 
-static int print_extension_info(zend_extension *ext, void *arg) /* {{{ */
+static void print_extension_info(zend_extension *ext) /* {{{ */
 {
 	php_printf("%s\n", ext->name);
-	return 0;
 }
 /* }}} */
 
@@ -235,7 +227,7 @@ static void print_extensions(void) /* {{{ */
 	zend_llist_copy(&sorted_exts, &zend_extensions);
 	sorted_exts.dtor = NULL;
 	zend_llist_sort(&sorted_exts, extension_name_cmp);
-	zend_llist_apply_with_argument(&sorted_exts, (llist_apply_with_arg_func_t) print_extension_info, NULL);
+	zend_llist_apply(&sorted_exts, (llist_apply_func_t) print_extension_info);
 	zend_llist_destroy(&sorted_exts);
 }
 /* }}} */
@@ -248,7 +240,7 @@ static inline size_t sapi_cgibin_single_write(const char *str, uint32_t str_leng
 {
 	ssize_t ret;
 
-	/* sapi has started which means everyhting must be send through fcgi */
+	/* sapi has started which means everything must be send through fcgi */
 	if (fpm_is_running) {
 		fcgi_request *request = (fcgi_request*) SG(server_context);
 		ret = fcgi_write(request, FCGI_STDOUT, str, str_length);
@@ -738,7 +730,10 @@ static int sapi_cgi_activate(void) /* {{{ */
 
 		/* Load and activate user ini files in path starting from DOCUMENT_ROOT */
 		if (PG(user_ini_filename) && *PG(user_ini_filename)) {
-			doc_root = FCGI_GETENV(request, "DOCUMENT_ROOT");
+			/* Prefer CONTEXT_DOCUMENT_ROOT if set */
+			doc_root = FCGI_GETENV(request, "CONTEXT_DOCUMENT_ROOT");
+			doc_root = doc_root ? doc_root : FCGI_GETENV(request, "DOCUMENT_ROOT");
+
 			/* DOCUMENT_ROOT should also be defined at this stage..but better check it anyway */
 			if (doc_root) {
 				doc_root_len = strlen(doc_root);
@@ -895,7 +890,7 @@ static int is_valid_path(const char *path)
 
   initializes request_info structure
 
-  specificly in this section we handle proper translations
+  specifically in this section we handle proper translations
   for:
 
   PATH_INFO
@@ -1143,8 +1138,8 @@ static void init_request_info(void)
 								path_info = script_path_translated + ptlen;
 								tflag = (slen != 0 && (!orig_path_info || strcmp(orig_path_info, path_info) != 0));
 							} else {
-								path_info = env_path_info ? env_path_info + pilen - slen : NULL;
-								tflag = (orig_path_info != path_info);
+								path_info = (env_path_info && pilen > slen) ? env_path_info + pilen - slen : NULL;
+								tflag = path_info && (orig_path_info != path_info);
 							}
 
 							if (tflag) {
@@ -1470,7 +1465,7 @@ PHP_FUNCTION(fastcgi_finish_request) /* {{{ */
 	fcgi_request *request = (fcgi_request*) SG(server_context);
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if (!fcgi_is_closed(request)) {
@@ -1492,7 +1487,7 @@ PHP_FUNCTION(apache_request_headers) /* {{{ */
 	fcgi_request *request;
 
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	array_init(return_value);
@@ -1506,7 +1501,7 @@ PHP_FUNCTION(apache_request_headers) /* {{{ */
 PHP_FUNCTION(fpm_get_status) /* {{{ */
 {
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if (fpm_status_export_to_zval(return_value)) {
@@ -1532,7 +1527,7 @@ static zend_module_entry cgi_module_entry = {
 	NULL,
 	NULL,
 	PHP_MINFO(cgi),
-	NO_VERSION_YET,
+	PHP_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 
@@ -1549,10 +1544,6 @@ int main(int argc, char *argv[])
 	char *orig_optarg = php_optarg;
 	int ini_entries_len = 0;
 	/* end of temporary locals */
-
-#ifdef ZTS
-	void ***tsrm_ls;
-#endif
 
 	int max_requests = 0;
 	int requests = 0;
@@ -1571,7 +1562,6 @@ int main(int argc, char *argv[])
 	zend_bool old_rc_debug;
 #endif
 
-#ifdef HAVE_SIGNAL_H
 #if defined(SIGPIPE) && defined(SIG_IGN)
 	signal(SIGPIPE, SIG_IGN); /* ignore SIGPIPE in standalone mode so
 								that sockets created via fsockopen()
@@ -1579,12 +1569,15 @@ int main(int argc, char *argv[])
 								closes it.  in apache|apxs mode apache
 								does that for us!  thies@thieso.net
 								20000419 */
-#endif
+
+	if (0 > fpm_signals_init_mask() || 0 > fpm_signals_block()) {
+		zlog(ZLOG_WARNING, "Could die in the case of too early reload signal");
+	}
+	zlog(ZLOG_DEBUG, "Blocked some signals");
 #endif
 
 #ifdef ZTS
-	tsrm_startup(1, 1, 0, NULL);
-	tsrm_ls = ts_resource(0);
+	php_tsrm_startup();
 #endif
 
 	zend_signal_startup();
@@ -1702,6 +1695,7 @@ int main(int argc, char *argv[])
 			default:
 			case 'h':
 			case '?':
+			case PHP_GETOPT_INVALID_ARG:
 				cgi_sapi_module.startup(&cgi_sapi_module);
 				php_output_activate();
 				SG(headers_sent) = 1;
@@ -1709,7 +1703,7 @@ int main(int argc, char *argv[])
 				php_output_end_all();
 				php_output_deactivate();
 				fcgi_shutdown();
-				exit_status = (c == 'h') ? FPM_EXIT_OK : FPM_EXIT_USAGE;
+				exit_status = (c != PHP_GETOPT_INVALID_ARG) ? FPM_EXIT_OK : FPM_EXIT_USAGE;
 				goto out;
 
 			case 'v': /* show php version & quit */
@@ -1723,9 +1717,9 @@ int main(int argc, char *argv[])
 				SG(request_info).no_headers = 1;
 
 #if ZEND_DEBUG
-				php_printf("PHP %s (%s) (built: %s %s) (DEBUG)\nCopyright (c) 1997-2018 The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__,        __TIME__, get_zend_version());
+				php_printf("PHP %s (%s) (built: %s %s) (DEBUG)\nCopyright (c) The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__,        __TIME__, get_zend_version());
 #else
-				php_printf("PHP %s (%s) (built: %s %s)\nCopyright (c) 1997-2018 The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__, __TIME__,      get_zend_version());
+				php_printf("PHP %s (%s) (built: %s %s)\nCopyright (c) The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__, __TIME__,      get_zend_version());
 #endif
 				php_request_shutdown((void *) 0);
 				fcgi_shutdown();
@@ -1915,7 +1909,7 @@ consult the installation file that came with this distribution, or visit \n\
 			}
 
 			/*
-			 * have to duplicate SG(request_info).path_translated to be able to log errrors
+			 * have to duplicate SG(request_info).path_translated to be able to log errors
 			 * php_fopen_primary_script seems to delete SG(request_info).path_translated on failure
 			 */
 			primary_script = estrdup(SG(request_info).path_translated);
@@ -1972,6 +1966,8 @@ fastcgi_request_done:
 
 			php_request_shutdown((void *) 0);
 
+			fpm_stdio_flush_child();
+
 			requests++;
 			if (UNEXPECTED(max_requests && (requests == max_requests))) {
 				fcgi_request_set_keep(request, 0);
@@ -2009,12 +2005,3 @@ out:
 	return exit_status;
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

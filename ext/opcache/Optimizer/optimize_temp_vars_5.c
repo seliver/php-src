@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend OPcache                                                         |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -102,7 +102,7 @@ void zend_optimize_temporary_variables(zend_op_array *op_array, zend_optimizer_c
 				if (!zend_bitset_in(valid_T, currT)) {
 					int use_new_var = 0;
 
-					/* Code in "finally" blocks may modify temorary variables.
+					/* Code in "finally" blocks may modify temporary variables.
 					 * We allocate new temporaries for values that need to
 					 * relive FAST_CALLs.
 					 */

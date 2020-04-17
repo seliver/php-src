@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -513,6 +511,10 @@ PHPAPI int php_network_parse_network_address_with_port(const char *addr, zend_lo
 	zend_string *errstr = NULL;
 #if HAVE_IPV6
 	struct sockaddr_in6 *in6 = (struct sockaddr_in6*)sa;
+
+	memset(in6, 0, sizeof(struct sockaddr_in6));
+#else
+	memset(in4, 0, sizeof(struct sockaddr_in));
 #endif
 
 	if (*addr == '[') {
@@ -873,7 +875,7 @@ php_socket_t php_network_connect_socket_to_host(const char *host, unsigned short
 #endif
 
 				if (!local_address || bind(sock, local_address, local_address_len)) {
-					php_error_docref(NULL, E_WARNING, "failed to bind to '%s:%d', system said: %s", bindto, bindport, strerror(errno));
+					php_error_docref(NULL, E_WARNING, "Failed to bind to '%s:%d', system said: %s", bindto, bindport, strerror(errno));
 				}
 skip_bind:
 				if (local_address) {
@@ -1171,16 +1173,18 @@ PHPAPI void _php_emit_fd_setsize_warning(int max_fd)
 PHPAPI int php_poll2(php_pollfd *ufds, unsigned int nfds, int timeout)
 {
 	fd_set rset, wset, eset;
-	php_socket_t max_fd = SOCK_ERR;
+	php_socket_t max_fd = SOCK_ERR; /* effectively unused on Windows */
 	unsigned int i;
 	int n;
 	struct timeval tv;
 
+#ifndef PHP_WIN32
 	/* check the highest numbered descriptor */
 	for (i = 0; i < nfds; i++) {
 		if (ufds[i].fd > max_fd)
 			max_fd = ufds[i].fd;
 	}
+#endif
 
 	PHP_SAFE_MAX_FD(max_fd, nfds + 1);
 
@@ -1204,7 +1208,7 @@ PHPAPI int php_poll2(php_pollfd *ufds, unsigned int nfds, int timeout)
 		tv.tv_sec = timeout / 1000;
 		tv.tv_usec = (timeout - (tv.tv_sec * 1000)) * 1000;
 	}
-/* Reseting/initializing */
+/* Resetting/initializing */
 #ifdef PHP_WIN32
 	WSASetLastError(0);
 #else
@@ -1319,12 +1323,3 @@ PHPAPI struct hostent*	php_network_gethostbyname(char *name) {
 	return gethostname_re(name, &FG(tmp_host_info), &FG(tmp_host_buf), &FG(tmp_host_buf_len));
 #endif
 }
-
-/*
- * Local variables:
- * tab-width: 8
- * c-basic-offset: 8
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

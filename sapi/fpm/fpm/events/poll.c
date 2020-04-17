@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -218,7 +216,7 @@ static int fpm_event_poll_add(struct fpm_event_s *ev) /* {{{ */
 		return 0;
 	}
 
-	zlog(ZLOG_ERROR, "poll: not enought space to add event (fd=%d)", ev->fd);
+	zlog(ZLOG_ERROR, "poll: not enough space to add event (fd=%d)", ev->fd);
 	return -1;
 }
 /* }}} */

@@ -11,11 +11,11 @@ Test parse_url() function: Parse a load of URLs without specifying PHP_URL_USER 
 /*
  * Parse a load of URLs without specifying PHP_URL_USER as the URL component
  */
-include_once(dirname(__FILE__) . '/urls.inc');
+include_once(__DIR__ . '/urls.inc');
 
 foreach ($urls as $url) {
-	echo "--> $url   : ";
-	var_dump(parse_url($url, PHP_URL_USER));
+    echo "--> $url   : ";
+    var_dump(parse_url($url, PHP_URL_USER));
 }
 
 echo "Done";

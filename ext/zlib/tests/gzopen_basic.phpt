@@ -18,7 +18,7 @@ echo "*** Testing gzopen() : basic functionality ***\n";
 
 
 // Initialise all required variables
-$filename = dirname(__FILE__)."/004.txt.gz";
+$filename = __DIR__."/004.txt.gz";
 $mode = 'r';
 $use_include_path = false;
 
@@ -33,7 +33,6 @@ gzpassthru($h);
 gzclose($h);
 
 ?>
-===DONE===
 --EXPECT--
 *** Testing gzopen() : basic functionality ***
 When you're taught through feelings
@@ -48,4 +47,3 @@ all I know is that you can realize it
 Destiny who cares
 as it turns around
 and I know that it descends down on me
-===DONE===

@@ -22,7 +22,7 @@ if (substr(PHP_OS, 0, 3) == 'WIN') {
 echo "*** Testing dir() : checking with wildcard characters ***\n";
 
 // create the temporary directories
-$file_path = dirname(__FILE__);
+$file_path = __DIR__;
 $dir_path = $file_path."/dir_variation81";
 $sub_dir_path = $dir_path."/sub_dir1";
 
@@ -45,16 +45,16 @@ echo "Done";
 *** Testing dir() : checking with wildcard characters ***
 -- wildcard = '*' --
 
-Warning: dir(%s/dir_var*): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_var*): Failed to open directory: %s in %s on line %d
 bool(false)
 
-Warning: dir(%s/*): failed to open dir: %s in %s on line %d
+Warning: dir(%s/*): Failed to open directory: %s in %s on line %d
 bool(false)
 -- wildcard = '?' --
 
-Warning: dir(%s/dir_variation81/sub_dir?): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_variation81/sub_dir?): Failed to open directory: %s in %s on line %d
 bool(false)
 
-Warning: dir(%s/dir_variation81/sub?dir1): failed to open dir: %s in %s on line %d
+Warning: dir(%s/dir_variation81/sub?dir1): Failed to open directory: %s in %s on line %d
 bool(false)
 Done

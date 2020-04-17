@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -22,9 +20,6 @@
 
 PHPAPI void make_digest(char *md5str, const unsigned char *digest);
 PHPAPI void make_digest_ex(char *md5str, const unsigned char *digest, int len);
-
-PHP_NAMED_FUNCTION(php_if_md5);
-PHP_NAMED_FUNCTION(php_if_md5_file);
 
 #include "ext/standard/basic_functions.h"
 

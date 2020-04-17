@@ -5,7 +5,7 @@ Bug #27303 (OCIBindByName binds numeric PHP values as characters)
 --FILE--
 <?php
 
-require dirname(__FILE__).'/connect.inc';
+require __DIR__.'/connect.inc';
 
 $create_st = array();
 $create_st[] = "drop sequence myseq";
@@ -14,8 +14,8 @@ $create_st[] = "create sequence myseq";
 $create_st[] = "create table mytab (mydata varchar2(20), seqcol number)";
 
 foreach ($create_st as $statement) {
-	$stmt = oci_parse($c, $statement);
-	@oci_execute($stmt);
+    $stmt = oci_parse($c, $statement);
+    @oci_execute($stmt);
 }
 
 define('MYLIMIT', 200);
@@ -31,9 +31,9 @@ $r = OCIBindByName($stid, ':MYBV', $mybv, 5, SQLT_INT);
 if (!$r) { echo "Bind error"; die; }
 
 for ($i = 1; $i < MYLIMIT; $i++) {
-	$r = OCIExecute($stid, OCI_DEFAULT);
-	if (!$r) { echo "Execute error"; die; }
-	var_dump($mybv);
+    $r = OCIExecute($stid, OCI_DEFAULT);
+    if (!$r) { echo "Execute error"; die; }
+    var_dump($mybv);
 }
 
 OCICommit($c);
@@ -43,8 +43,8 @@ $drop_st[] = "drop sequence myseq";
 $drop_st[] = "drop table mytab";
 
 foreach ($create_st as $statement) {
-	$stmt = oci_parse($c, $statement);
-	oci_execute($stmt);
+    $stmt = oci_parse($c, $statement);
+    oci_execute($stmt);
 }
 
 echo "Done\n";

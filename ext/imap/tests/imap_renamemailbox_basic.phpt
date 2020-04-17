@@ -4,7 +4,7 @@ imap_renamemailbox() function : basic functionality
 Olivier Doucet
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -16,12 +16,12 @@ imap_renamemailbox('');
 imap_renamemailbox(false);
 
 
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 $stream_id = setup_test_mailbox('', 1);
 
 if (!is_resource($stream_id)) {
-	exit("TEST FAILED: Unable to create test mailbox\n");
+    exit("TEST FAILED: Unable to create test mailbox\n");
 }
 
 $newbox = $default_mailbox . "." . $mailbox_prefix;

@@ -7,7 +7,7 @@ oci8.privileged_connect=1
 --FILE--
 <?php
 
-require dirname(__FILE__)."/connect.inc";
+require __DIR__."/connect.inc";
 
 oci_connect("", "", "", false, OCI_SYSOPER);
 oci_connect("", "", "", false, OCI_SYSDBA);
@@ -23,5 +23,5 @@ Warning: oci_connect(): ORA-%d: %s in %s on line %d
 
 Warning: oci_connect(): Invalid session mode specified (-1) in %s on line %d
 
-Warning: oci_connect() expects parameter 5 to be int%s string given in %s on line %d
+Warning: oci_connect(): Argument #5 must be of type int%s string given in %s on line %d
 Done

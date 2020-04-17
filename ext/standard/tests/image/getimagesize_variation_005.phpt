@@ -15,10 +15,9 @@ Test getimagesize() function : basic functionality for shockwave-flash
 
 echo "*** Testing getimagesize() : basic functionality ***\n";
 
-var_dump( getimagesize(dirname(__FILE__)."/test13pix.swf", $info) );
+var_dump( getimagesize(__DIR__."/test13pix.swf", $info) );
 var_dump( $info );
 ?>
-===DONE===
 --EXPECT--
 *** Testing getimagesize() : basic functionality ***
 array(5) {
@@ -35,4 +34,3 @@ array(5) {
 }
 array(0) {
 }
-===DONE===

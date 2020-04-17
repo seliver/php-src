@@ -1,5 +1,3 @@
-dnl -*- autoconf -*-
-
 dnl
 dnl Check if flush should be called explicitly after buffered io
 dnl
@@ -7,6 +5,10 @@ AC_CACHE_CHECK([whether flush should be called explicitly after a buffered io], 
 AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#include <string.h>
 
 int main(int argc, char **argv)
 {
@@ -69,6 +71,9 @@ AC_CACHE_CHECK(for standard DES crypt, ac_cv_crypt_des,[
 #include <crypt.h>
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 int main() {
 #if HAVE_CRYPT
 	char *encrypted = crypt("rasmuslerdorf","rl");
@@ -94,6 +99,9 @@ AC_CACHE_CHECK(for extended DES crypt, ac_cv_crypt_ext_des,[
 #include <crypt.h>
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 int main() {
 #if HAVE_CRYPT
 	char *encrypted = crypt("rasmuslerdorf","_J9..rasm");
@@ -118,6 +126,9 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #if HAVE_CRYPT_H
 #include <crypt.h>
 #endif
+
+#include <stdlib.h>
+#include <string.h>
 
 int main() {
 #if HAVE_CRYPT
@@ -154,6 +165,9 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <crypt.h>
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 int main() {
 #if HAVE_CRYPT
 	char salt[30], answer[70];
@@ -186,6 +200,9 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <crypt.h>
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 int main() {
 #if HAVE_CRYPT
 	char salt[21], answer[21+86];
@@ -216,6 +233,9 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #if HAVE_CRYPT_H
 #include <crypt.h>
 #endif
+
+#include <stdlib.h>
+#include <string.h>
 
 int main() {
 #if HAVE_CRYPT
@@ -283,17 +303,11 @@ if test "$ac_cv_attribute_aligned" = "yes"; then
   AC_DEFINE([HAVE_ATTRIBUTE_ALIGNED], 1, [whether the compiler supports __attribute__ ((__aligned__))])
 fi
 
-dnl
-dnl Check for available functions
-dnl
-dnl log2 could be used to improve the log function, however it requires C99. The check for log2 should be turned on,
-dnl as soon as we support C99.
-AC_CHECK_FUNCS(getcwd getwd asinh acosh atanh log1p hypot glob strfmon nice fpclass mempcpy strpncpy)
 AC_FUNC_FNMATCH
 
 dnl
-dnl Check if there is a support means of creating a new process
-dnl and defining which handles it receives
+dnl Check if there is a support means of creating a new process and defining
+dnl which handles it receives
 dnl
 AC_CHECK_FUNCS(fork CreateProcess, [
   php_can_support_proc_open=yes
@@ -337,7 +351,8 @@ fi
 
 dnl
 dnl Detect library functions needed by php dns_xxx functions
-dnl ext/standard/php_dns.h will collect these in a single define: HAVE_FULL_DNS_FUNCS
+dnl ext/standard/php_dns.h will collect these in a single define
+dnl HAVE_FULL_DNS_FUNCS
 dnl
 PHP_CHECK_FUNC(res_nsearch, resolv, bind, socket)
 PHP_CHECK_FUNC(res_ndestroy, resolv, bind, socket)
@@ -374,27 +389,6 @@ if test "$ac_cv_strptime_decl_fails" = "yes"; then
 fi
 
 dnl
-dnl Check for i18n capabilities
-dnl
-AC_CHECK_HEADERS([wchar.h])
-AC_CHECK_FUNCS([mblen mbrlen mbsinit])
-AC_CACHE_CHECK([for mbstate_t], [ac_cv_type_mbstate_t],[
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef HAVE_WCHAR_H
-# include <wchar.h>
-#endif
-]],[[
-mbstate_t a;
-]])],[
-  ac_cv_type_mbstate_t=yes
-],[
-  ac_cv_type_mbstate_t=no
-])])
-if test "$ac_cv_type_mbstate_t" = "yes"; then
-  AC_DEFINE([HAVE_MBSTATE_T], 1, [Define if your system has mbstate_t in wchar.h])
-fi
-
-dnl
 dnl Check for atomic operation API availability in Solaris
 dnl
 AC_CHECK_HEADERS([atomic.h])
@@ -407,9 +401,11 @@ AC_CHECK_DECLS([arc4random_buf])
 dnl
 dnl Check for argon2
 dnl
-PHP_ARG_WITH(password-argon2, for Argon2 support,
-[  --with-password-argon2[=DIR]
-                          Include Argon2 support in password_*. DIR is the Argon2 shared library path])
+PHP_ARG_WITH([password-argon2],
+  [for Argon2 support],
+  [AS_HELP_STRING([[--with-password-argon2[=DIR]]],
+    [Include Argon2 support in password_*. DIR is the Argon2 shared library
+    path])])
 
 if test "$PHP_PASSWORD_ARGON2" != "no"; then
   AC_MSG_CHECKING([for Argon2 library])
@@ -447,7 +443,6 @@ AC_CHECK_HEADERS([net/if.h],[], [],
   #endif
   #include <net/if.h>
 ])
-AC_CHECK_HEADERS([netdb.h])
 AC_MSG_CHECKING([for usable getifaddrs])
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
   #include <sys/types.h>
@@ -469,7 +464,7 @@ dnl
 dnl Setup extension sources
 dnl
 PHP_NEW_EXTENSION(standard, array.c base64.c basic_functions.c browscap.c crc32.c crypt.c \
-                            cyr_convert.c datetime.c dir.c dl.c dns.c exec.c file.c filestat.c \
+                            datetime.c dir.c dl.c dns.c exec.c file.c filestat.c \
                             flock_compat.c formatted_print.c fsock.c head.c html.c image.c \
                             info.c iptc.c lcg.c link.c mail.c math.c md5.c metaphone.c \
                             microtime.c pack.c pageinfo.c quot_print.c rand.c mt_rand.c \

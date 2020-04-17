@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 1997-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -24,6 +22,7 @@
 #include "php_globals.h"
 #include "ext/standard/info.h"
 #include "php_sysvmsg.h"
+#include "sysvmsg_arginfo.h"
 #include "ext/standard/php_var.h"
 #include "zend_smart_str.h"
 
@@ -33,14 +32,6 @@
 
 PHP_MINIT_FUNCTION(sysvmsg);
 PHP_MINFO_FUNCTION(sysvmsg);
-
-PHP_FUNCTION(msg_get_queue);
-PHP_FUNCTION(msg_remove_queue);
-PHP_FUNCTION(msg_stat_queue);
-PHP_FUNCTION(msg_set_queue);
-PHP_FUNCTION(msg_send);
-PHP_FUNCTION(msg_receive);
-PHP_FUNCTION(msg_queue_exists);
 
 typedef struct {
 	key_t key;
@@ -62,72 +53,12 @@ struct php_msgbuf {
 /* True global resources - no need for thread safety here */
 static int le_sysvmsg;
 
-/* {{{ arginfo */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_get_queue, 0, 0, 1)
-	ZEND_ARG_INFO(0, key)
-	ZEND_ARG_INFO(0, perms)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_send, 0, 0, 3)
-	ZEND_ARG_INFO(0, queue)
-	ZEND_ARG_INFO(0, msgtype)
-	ZEND_ARG_INFO(0, message)
-	ZEND_ARG_INFO(0, serialize)
-	ZEND_ARG_INFO(0, blocking)
-	ZEND_ARG_INFO(1, errorcode)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_receive, 0, 0, 5)
-	ZEND_ARG_INFO(0, queue)
-	ZEND_ARG_INFO(0, desiredmsgtype)
-	ZEND_ARG_INFO(1, msgtype)
-	ZEND_ARG_INFO(0, maxsize)
-	ZEND_ARG_INFO(1, message)
-	ZEND_ARG_INFO(0, unserialize)
-	ZEND_ARG_INFO(0, flags)
-	ZEND_ARG_INFO(1, errorcode)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_remove_queue, 0, 0, 1)
-	ZEND_ARG_INFO(0, queue)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_stat_queue, 0, 0, 1)
-	ZEND_ARG_INFO(0, queue)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_set_queue, 0, 0, 2)
-	ZEND_ARG_INFO(0, queue)
-	ZEND_ARG_INFO(0, data)
-ZEND_END_ARG_INFO()
-
-ZEND_BEGIN_ARG_INFO_EX(arginfo_msg_queue_exists, 0, 0, 1)
-	ZEND_ARG_INFO(0, key)
-ZEND_END_ARG_INFO()
-/* }}} */
-
-/* {{{ sysvmsg_functions[]
- *
- * Every user visible function must have an entry in sysvmsg_functions[].
- */
-static const zend_function_entry sysvmsg_functions[] = {
-	PHP_FE(msg_get_queue,				arginfo_msg_get_queue)
-	PHP_FE(msg_send,					arginfo_msg_send)
-	PHP_FE(msg_receive,					arginfo_msg_receive)
-	PHP_FE(msg_remove_queue,			arginfo_msg_remove_queue)
-	PHP_FE(msg_stat_queue,				arginfo_msg_stat_queue)
-	PHP_FE(msg_set_queue,				arginfo_msg_set_queue)
-	PHP_FE(msg_queue_exists,			arginfo_msg_queue_exists)
-	PHP_FE_END
-};
-/* }}} */
-
 /* {{{ sysvmsg_module_entry
  */
 zend_module_entry sysvmsg_module_entry = {
 	STANDARD_MODULE_HEADER,
 	"sysvmsg",
-	sysvmsg_functions,
+	ext_functions,
 	PHP_MINIT(sysvmsg),
 	NULL,
 	NULL,
@@ -183,11 +114,11 @@ PHP_FUNCTION(msg_set_queue)
 	RETVAL_FALSE;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "ra", &queue, &data) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if ((mq = (sysvmsg_queue_t *)zend_fetch_resource(Z_RES_P(queue), "sysvmsg queue", le_sysvmsg)) == NULL) {
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	if (msgctl(mq->id, IPC_STAT, &stat) == 0) {
@@ -224,11 +155,11 @@ PHP_FUNCTION(msg_stat_queue)
 	RETVAL_FALSE;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &queue) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if ((mq = (sysvmsg_queue_t *)zend_fetch_resource(Z_RES_P(queue), "sysvmsg queue", le_sysvmsg)) == NULL) {
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	if (msgctl(mq->id, IPC_STAT, &stat) == 0) {
@@ -255,7 +186,7 @@ PHP_FUNCTION(msg_queue_exists)
 	zend_long key;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &key) == FAILURE)	{
-		return;
+		RETURN_THROWS();
 	}
 
 	if (msgget(key, 0) < 0) {
@@ -275,7 +206,7 @@ PHP_FUNCTION(msg_get_queue)
 	sysvmsg_queue_t *mq;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "l|l", &key, &perms) == FAILURE)	{
-		return;
+		RETURN_THROWS();
 	}
 
 	mq = (sysvmsg_queue_t *) emalloc(sizeof(sysvmsg_queue_t));
@@ -286,7 +217,7 @@ PHP_FUNCTION(msg_get_queue)
 		/* doesn't already exist; create it */
 		mq->id = msgget(key, IPC_CREAT | IPC_EXCL | perms);
 		if (mq->id < 0)	{
-			php_error_docref(NULL, E_WARNING, "failed for key 0x" ZEND_XLONG_FMT ": %s", key, strerror(errno));
+			php_error_docref(NULL, E_WARNING, "Failed for key 0x" ZEND_XLONG_FMT ": %s", key, strerror(errno));
 			efree(mq);
 			RETURN_FALSE;
 		}
@@ -303,11 +234,11 @@ PHP_FUNCTION(msg_remove_queue)
 	sysvmsg_queue_t *mq = NULL;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &queue) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if ((mq = (sysvmsg_queue_t *)zend_fetch_resource(Z_RES_P(queue), "sysvmsg queue", le_sysvmsg)) == NULL) {
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	if (msgctl(mq->id, IPC_RMID, NULL) == 0) {
@@ -335,11 +266,11 @@ PHP_FUNCTION(msg_receive)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rlzlz|blz",
 				&queue, &desiredmsgtype, &out_msgtype, &maxsize,
 				&out_message, &do_unserialize, &flags, &zerrcode) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if (maxsize <= 0) {
-		php_error_docref(NULL, E_WARNING, "maximum size of the message has to be greater than zero");
+		php_error_docref(NULL, E_WARNING, "Maximum size of the message has to be greater than zero");
 		return;
 	}
 
@@ -361,7 +292,7 @@ PHP_FUNCTION(msg_receive)
 	}
 
 	if ((mq = (sysvmsg_queue_t *)zend_fetch_resource(Z_RES_P(queue), "sysvmsg queue", le_sysvmsg)) == NULL) {
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	messagebuffer = (struct php_msgbuf *) safe_emalloc(maxsize, 1, sizeof(struct php_msgbuf));
@@ -370,9 +301,9 @@ PHP_FUNCTION(msg_receive)
 
 	if (result >= 0) {
 		/* got it! */
-		ZEND_TRY_ASSIGN_LONG(out_msgtype, messagebuffer->mtype);
+		ZEND_TRY_ASSIGN_REF_LONG(out_msgtype, messagebuffer->mtype);
 		if (zerrcode) {
-			ZEND_TRY_ASSIGN_LONG(zerrcode, 0);
+			ZEND_TRY_ASSIGN_REF_LONG(zerrcode, 0);
 		}
 
 		RETVAL_TRUE;
@@ -383,21 +314,21 @@ PHP_FUNCTION(msg_receive)
 
 			PHP_VAR_UNSERIALIZE_INIT(var_hash);
 			if (!php_var_unserialize(&tmp, &p, p + result, &var_hash)) {
-				php_error_docref(NULL, E_WARNING, "message corrupted");
-				ZEND_TRY_ASSIGN_FALSE(out_message);
+				php_error_docref(NULL, E_WARNING, "Message corrupted");
+				ZEND_TRY_ASSIGN_REF_FALSE(out_message);
 				RETVAL_FALSE;
 			} else {
-				ZEND_TRY_ASSIGN_VALUE(out_message, &tmp);
+				ZEND_TRY_ASSIGN_REF_TMP(out_message, &tmp);
 			}
 			PHP_VAR_UNSERIALIZE_DESTROY(var_hash);
 		} else {
-			ZEND_TRY_ASSIGN_STRINGL(out_message, messagebuffer->mtext, result);
+			ZEND_TRY_ASSIGN_REF_STRINGL(out_message, messagebuffer->mtext, result);
 		}
 	} else {
-		ZEND_TRY_ASSIGN_LONG(out_msgtype, 0);
-		ZEND_TRY_ASSIGN_FALSE(out_message);
+		ZEND_TRY_ASSIGN_REF_LONG(out_msgtype, 0);
+		ZEND_TRY_ASSIGN_REF_FALSE(out_message);
 		if (zerrcode) {
-			ZEND_TRY_ASSIGN_LONG(zerrcode, errno);
+			ZEND_TRY_ASSIGN_REF_LONG(zerrcode, errno);
 		}
 	}
 	efree(messagebuffer);
@@ -420,11 +351,11 @@ PHP_FUNCTION(msg_send)
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), "rlz|bbz",
 				&queue, &msgtype, &message, &do_serialize, &blocking, &zerror) == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	if ((mq = (sysvmsg_queue_t *)zend_fetch_resource(Z_RES_P(queue), "sysvmsg queue", le_sysvmsg)) == NULL) {
-		RETURN_FALSE;
+		RETURN_THROWS();
 	}
 
 	if (do_serialize) {
@@ -484,19 +415,10 @@ PHP_FUNCTION(msg_send)
 	if (result == -1) {
 		php_error_docref(NULL, E_WARNING, "msgsnd failed: %s", strerror(errno));
 		if (zerror) {
-			ZEND_TRY_ASSIGN_LONG(zerror, errno);
+			ZEND_TRY_ASSIGN_REF_LONG(zerror, errno);
 		}
 	} else {
 		RETVAL_TRUE;
 	}
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 tw=78 fdm=marker
- * vim<600: noet sw=4 ts=4 tw=78
- */

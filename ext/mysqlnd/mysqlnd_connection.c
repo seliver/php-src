@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -480,7 +478,8 @@ MYSQLND_METHOD(mysqlnd_conn_data, get_updated_connect_flags)(MYSQLND_CONN_DATA *
 	MYSQLND_VIO * vio = conn->vio;
 
 	DBG_ENTER("mysqlnd_conn_data::get_updated_connect_flags");
-	/* we allow load data local infile by default */
+	/* allow CLIENT_LOCAL_FILES capability, although extensions basing on mysqlnd
+		shouldn't allow 'load data local infile' by default due to security issues */
 	mysql_flags |= MYSQLND_CAPABILITIES;
 
 	mysql_flags |= conn->options->flags; /* use the flags from set_client_option() */
@@ -508,6 +507,10 @@ MYSQLND_METHOD(mysqlnd_conn_data, get_updated_connect_flags)(MYSQLND_CONN_DATA *
 		mysql_flags |= CLIENT_SSL;
 	}
 #endif
+
+    if (conn->options->connect_attr && zend_hash_num_elements(conn->options->connect_attr)) {
+		mysql_flags |= CLIENT_CONNECT_ATTRS;
+	}
 
 	DBG_RETURN(mysql_flags);
 }
@@ -652,7 +655,7 @@ MYSQLND_METHOD(mysqlnd_conn_data, connect)(MYSQLND_CONN_DATA * conn,
 		password.s = "";
 		password.l = 0;
 	}
-	if (!database.s) {
+	if (!database.s || !database.s[0]) {
 		DBG_INF_FMT("no db given, using empty string");
 		database.s = "";
 		database.l = 0;
@@ -666,13 +669,9 @@ MYSQLND_METHOD(mysqlnd_conn_data, connect)(MYSQLND_CONN_DATA * conn,
 
 	{
 		const MYSQLND_CSTRING scheme = { transport.s, transport.l };
-		/* This will be overwritten below with a copy, but we can use it during authentication */
-		conn->unix_socket.s = (char *)socket_or_pipe.s;
 		if (FAIL == conn->m->connect_handshake(conn, &scheme, &username, &password, &database, mysql_flags)) {
-			conn->unix_socket.s = NULL;
 			goto err;
 		}
-		conn->unix_socket.s = NULL;
 	}
 
 	{
@@ -790,7 +789,7 @@ err:
 
 	DBG_ERR_FMT("[%u] %.128s (trying to connect via %s)", conn->error_info->error_no, conn->error_info->error, conn->scheme.s);
 	if (!conn->error_info->error_no) {
-		SET_CLIENT_ERROR(conn->error_info, CR_CONNECTION_ERROR, UNKNOWN_SQLSTATE, conn->error_info->error? conn->error_info->error:"Unknown error");
+		SET_CLIENT_ERROR(conn->error_info, CR_CONNECTION_ERROR, UNKNOWN_SQLSTATE, conn->error_info->error);
 		php_error_docref(NULL, E_WARNING, "[%u] %.128s (trying to connect via %s)", conn->error_info->error_no, conn->error_info->error, conn->scheme.s);
 	}
 
@@ -824,6 +823,9 @@ MYSQLND_METHOD(mysqlnd_conn, connect)(MYSQLND * conn_handle,
 
 	if (PASS == conn->m->local_tx_start(conn, this_func)) {
 		mysqlnd_options4(conn_handle, MYSQL_OPT_CONNECT_ATTR_ADD, "_client_name", "mysqlnd");
+        if (hostname.l > 0) {
+            mysqlnd_options4(conn_handle, MYSQL_OPT_CONNECT_ATTR_ADD, "_server_host", hostname.s);
+        }
 		ret = conn->m->connect(conn, hostname, username, password, database, port, socket_or_pipe, mysql_flags);
 
 		conn->m->local_tx_end(conn, this_func, FAIL);
@@ -1433,6 +1435,14 @@ MYSQLND_METHOD(mysqlnd_conn_data, get_server_version)(const MYSQLND_CONN_DATA * 
 
 	if (!(p = conn->server_version)) {
 		return 0;
+	}
+
+#define MARIA_DB_VERSION_HACK_PREFIX "5.5.5-"
+
+	if (conn->server_capabilities & CLIENT_PLUGIN_AUTH
+		&& !strncmp(p, MARIA_DB_VERSION_HACK_PREFIX, sizeof(MARIA_DB_VERSION_HACK_PREFIX)-1))
+	{
+		p += sizeof(MARIA_DB_VERSION_HACK_PREFIX)-1;
 	}
 
 	major = ZEND_STRTOL(p, &p, 10);
@@ -2631,7 +2641,7 @@ mysqlnd_poll(MYSQLND **r_array, MYSQLND **e_array, MYSQLND ***dont_poll, long se
 	retval = php_select(max_fd + 1, &rfds, &wfds, &efds, tv_p);
 
 	if (retval == -1) {
-		php_error_docref(NULL, E_WARNING, "unable to select [%d]: %s (max_fd=%d)",
+		php_error_docref(NULL, E_WARNING, "Unable to select [%d]: %s (max_fd=%d)",
 						errno, strerror(errno), max_fd);
 		DBG_RETURN(FAIL);
 	}
@@ -2711,13 +2721,3 @@ mysqlnd_connection_init(const size_t client_flags, const zend_bool persistent, M
 	DBG_RETURN(ret);
 }
 /* }}} */
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

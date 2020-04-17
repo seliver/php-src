@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Zend Engine                                                          |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1998-2018 Zend Technologies Ltd. (http://www.zend.com) |
+   | Copyright (c) Zend Technologies Ltd. (http://www.zend.com)           |
    +----------------------------------------------------------------------+
    | This source file is subject to version 2.00 of the Zend license,     |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -42,6 +42,7 @@ enum _zend_ast_kind {
 	ZEND_AST_CLOSURE,
 	ZEND_AST_METHOD,
 	ZEND_AST_CLASS,
+	ZEND_AST_ARROW_FUNC,
 
 	/* list nodes */
 	ZEND_AST_ARG_LIST = 1 << ZEND_AST_IS_LIST_SHIFT,
@@ -60,6 +61,7 @@ enum _zend_ast_kind {
 	ZEND_AST_NAME_LIST,
 	ZEND_AST_TRAIT_ADAPTATIONS,
 	ZEND_AST_USE,
+	ZEND_AST_TYPE_UNION,
 
 	/* 0 child nodes */
 	ZEND_AST_MAGIC_CONST = 0 << ZEND_AST_NUM_CHILDREN_SHIFT,
@@ -281,6 +283,10 @@ ZEND_API void ZEND_FASTCALL zend_ast_ref_destroy(zend_ast_ref *ast);
 typedef void (*zend_ast_apply_func)(zend_ast **ast_ptr);
 ZEND_API void zend_ast_apply(zend_ast *ast, zend_ast_apply_func fn);
 
+static zend_always_inline zend_bool zend_ast_is_special(zend_ast *ast) {
+	return (ast->kind >> ZEND_AST_SPECIAL_SHIFT) & 1;
+}
+
 static zend_always_inline zend_bool zend_ast_is_list(zend_ast *ast) {
 	return (ast->kind >> ZEND_AST_IS_LIST_SHIFT) & 1;
 }
@@ -335,13 +341,3 @@ static zend_always_inline zend_ast *zend_ast_list_rtrim(zend_ast *ast) {
 	return ast;
 }
 #endif
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * indent-tabs-mode: t
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

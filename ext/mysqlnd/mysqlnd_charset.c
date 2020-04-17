@@ -1,8 +1,6 @@
 /*
   +----------------------------------------------------------------------+
-  | PHP Version 7                                                        |
-  +----------------------------------------------------------------------+
-  | Copyright (c) 2006-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -819,9 +817,9 @@ PHPAPI zend_ulong mysqlnd_cset_escape_quotes(const MYSQLND_CHARSET * const cset,
 	*newstr = '\0';
 
 	if (escape_overflow) {
-		DBG_RETURN((ulong)~0);
+		DBG_RETURN((zend_ulong)~0);
 	}
-	DBG_RETURN((ulong)(newstr - newstr_s));
+	DBG_RETURN((zend_ulong)(newstr - newstr_s));
 }
 /* }}} */
 
@@ -899,9 +897,9 @@ PHPAPI zend_ulong mysqlnd_cset_escape_slashes(const MYSQLND_CHARSET * const cset
 	*newstr = '\0';
 
 	if (escape_overflow) {
-		DBG_RETURN((ulong)~0);
+		DBG_RETURN((zend_ulong)~0);
 	}
-	DBG_RETURN((ulong)(newstr - newstr_s));
+	DBG_RETURN((zend_ulong)(newstr - newstr_s));
 }
 /* }}} */
 
@@ -939,13 +937,3 @@ mysqlnd_charsets_plugin_register(void)
 	mysqlnd_plugin_register_ex((struct st_mysqlnd_plugin_header *) &mysqlnd_plugin_charsets_plugin);
 }
 /* }}} */
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

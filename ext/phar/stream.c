@@ -2,7 +2,7 @@
   +----------------------------------------------------------------------+
   | phar:// stream wrapper support                                       |
   +----------------------------------------------------------------------+
-  | Copyright (c) 2005-2018 The PHP Group                                |
+  | Copyright (c) The PHP Group                                          |
   +----------------------------------------------------------------------+
   | This source file is subject to version 3.01 of the PHP license,      |
   | that is bundled with this package in the file LICENSE, and is        |
@@ -361,7 +361,7 @@ static int phar_stream_close(php_stream *stream, int close_handle) /* {{{ */
 /**
  * used for fread($fp) and company on a fopen()ed phar file handle
  */
-static size_t phar_stream_read(php_stream *stream, char *buf, size_t count) /* {{{ */
+static ssize_t phar_stream_read(php_stream *stream, char *buf, size_t count) /* {{{ */
 {
 	phar_entry_data *data = (phar_entry_data *)stream->abstract;
 	size_t got;
@@ -375,7 +375,7 @@ static size_t phar_stream_read(php_stream *stream, char *buf, size_t count) /* {
 
 	if (entry->is_deleted) {
 		stream->eof = 1;
-		return 0;
+		return -1;
 	}
 
 	/* use our proxy position */
@@ -436,14 +436,14 @@ static int phar_stream_seek(php_stream *stream, zend_off_t offset, int whence, z
 /**
  * Used for writing to a phar file
  */
-static size_t phar_stream_write(php_stream *stream, const char *buf, size_t count) /* {{{ */
+static ssize_t phar_stream_write(php_stream *stream, const char *buf, size_t count) /* {{{ */
 {
 	phar_entry_data *data = (phar_entry_data *) stream->abstract;
 
 	php_stream_seek(data->fp, data->position, SEEK_SET);
 	if (count != php_stream_write(data->fp, buf, count)) {
 		php_stream_wrapper_log_error(stream->wrapper, stream->flags, "phar error: Could not write %d characters to \"%s\" in phar \"%s\"", (int) count, data->internal_file->filename, data->phar->fname);
-		return 0;
+		return -1;
 	}
 	data->position = php_stream_tell(data->fp);
 	if (data->position > (zend_off_t)data->internal_file->uncompressed_filesize) {
@@ -967,12 +967,3 @@ static int phar_wrapper_rename(php_stream_wrapper *wrapper, const char *url_from
 	return 1;
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

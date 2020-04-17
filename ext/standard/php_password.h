@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -20,12 +18,6 @@
 #ifndef PHP_PASSWORD_H
 #define PHP_PASSWORD_H
 
-PHP_FUNCTION(password_hash);
-PHP_FUNCTION(password_verify);
-PHP_FUNCTION(password_needs_rehash);
-PHP_FUNCTION(password_get_info);
-PHP_FUNCTION(password_algos);
-
 PHP_MINIT_FUNCTION(password);
 PHP_MSHUTDOWN_FUNCTION(password);
 
@@ -33,9 +25,13 @@ PHP_MSHUTDOWN_FUNCTION(password);
 #define PHP_PASSWORD_BCRYPT_COST 10
 
 #if HAVE_ARGON2LIB
-#define PHP_PASSWORD_ARGON2_MEMORY_COST 1<<10
-#define PHP_PASSWORD_ARGON2_TIME_COST 2
-#define PHP_PASSWORD_ARGON2_THREADS 2
+/**
+ * When updating these values, synchronize ext/sodium/sodium_pwhash.c values.
+ * Note that libargon expresses memlimit in KB, while libsoidum uses bytes.
+ */
+#define PHP_PASSWORD_ARGON2_MEMORY_COST (64 << 10)
+#define PHP_PASSWORD_ARGON2_TIME_COST 4
+#define PHP_PASSWORD_ARGON2_THREADS 1
 #endif
 
 typedef struct _php_password_algo {
@@ -66,11 +62,3 @@ static inline const php_password_algo* php_password_algo_identify(const zend_str
 
 
 #endif
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- */

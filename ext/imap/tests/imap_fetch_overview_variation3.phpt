@@ -2,7 +2,7 @@
 Test imap_fetch_overview() function : usage variations - FT_UID option
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -19,7 +19,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
 
 echo "*** Testing imap_fetch_overview() : usage variations ***\n";
 
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 
 // Initialise required variables
 $stream_id = setup_test_mailbox('', 1); // set up temporary mailbox with one simple message
@@ -38,20 +38,19 @@ $options = array ('1',
 $iterator = 1;
 imap_check($stream_id);
 foreach($options as $option) {
-	echo "\nTesting with option value:";
-	var_dump($option);
-	$overview = imap_fetch_overview($stream_id, $msg_uid, $option);
-	if ($overview) {
+    echo "\nTesting with option value:";
+    var_dump($option);
+    $overview = imap_fetch_overview($stream_id, $msg_uid, $option);
+    if ($overview) {
                 echo "imap_fetch_overview() returns an object\n";
         }
-	$iterator++;
+    $iterator++;
 }
 
 ?>
-===DONE===
 --CLEAN--
 <?php
-require_once(dirname(__FILE__).'/clean.inc');
+require_once(__DIR__.'/clean.inc');
 ?>
 --EXPECTF--
 *** Testing imap_fetch_overview() : usage variations ***
@@ -72,9 +71,8 @@ imap_fetch_overview() returns an object
 
 Testing with option value:int(%d)
 
-Warning: imap_fetch_overview(): invalid value for the options parameter in %s on line %d
+Warning: imap_fetch_overview(): Invalid value for the options parameter in %s on line %d
 
 Testing with option value:int(-%d)
 
-Warning: imap_fetch_overview(): invalid value for the options parameter in %s on line %d
-===DONE===
+Warning: imap_fetch_overview(): Invalid value for the options parameter in %s on line %d

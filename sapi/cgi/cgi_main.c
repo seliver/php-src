@@ -1,8 +1,6 @@
 /*
    +----------------------------------------------------------------------+
-   | PHP Version 7                                                        |
-   +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2018 The PHP Group                                |
+   | Copyright (c) The PHP Group                                          |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -45,13 +43,9 @@
 # include <unistd.h>
 #endif
 
-#if HAVE_SIGNAL_H
-# include <signal.h>
-#endif
+#include <signal.h>
 
-#if HAVE_SETLOCALE
-# include <locale.h>
-#endif
+#include <locale.h>
 
 #if HAVE_SYS_TYPES_H
 # include <sys/types.h>
@@ -244,11 +238,8 @@ static void fcgi_log(int type, const char *format, ...) {
 }
 #endif
 
-static int module_name_cmp(const void *a, const void *b)
+static int module_name_cmp(Bucket *f, Bucket *s)
 {
-	Bucket *f = (Bucket *) a;
-	Bucket *s = (Bucket *) b;
-
 	return strcasecmp(	((zend_module_entry *)Z_PTR(f->val))->name,
 						((zend_module_entry *)Z_PTR(s->val))->name);
 }
@@ -267,10 +258,9 @@ static void print_modules(void)
 	zend_hash_destroy(&sorted_registry);
 }
 
-static int print_extension_info(zend_extension *ext, void *arg)
+static void print_extension_info(zend_extension *ext)
 {
 	php_printf("%s\n", ext->name);
-	return 0;
 }
 
 static int extension_name_cmp(const zend_llist_element **f, const zend_llist_element **s)
@@ -287,7 +277,7 @@ static void print_extensions(void)
 	zend_llist_copy(&sorted_exts, &zend_extensions);
 	sorted_exts.dtor = NULL;
 	zend_llist_sort(&sorted_exts, extension_name_cmp);
-	zend_llist_apply_with_argument(&sorted_exts, (llist_apply_with_arg_func_t) print_extension_info, NULL);
+	zend_llist_apply(&sorted_exts, (llist_apply_func_t) print_extension_info);
 	zend_llist_destroy(&sorted_exts);
 }
 
@@ -919,9 +909,12 @@ static int sapi_cgi_activate(void)
 			if (fcgi_is_fastcgi()) {
 				fcgi_request *request = (fcgi_request*) SG(server_context);
 
-				doc_root = FCGI_GETENV(request, "DOCUMENT_ROOT");
+				/* Prefer CONTEXT_DOCUMENT_ROOT if set */
+				doc_root = FCGI_GETENV(request, "CONTEXT_DOCUMENT_ROOT");
+				doc_root = doc_root ? doc_root : FCGI_GETENV(request, "DOCUMENT_ROOT");
 			} else {
-				doc_root = getenv("DOCUMENT_ROOT");
+				doc_root = getenv("CONTEXT_DOCUMENT_ROOT");
+				doc_root = doc_root ? doc_root : getenv("DOCUMENT_ROOT");
 			}
 			/* DOCUMENT_ROOT should also be defined at this stage..but better check it anyway */
 			if (doc_root) {
@@ -1107,7 +1100,7 @@ static int is_valid_path(const char *path)
 
   initializes request_info structure
 
-  specificly in this section we handle proper translations
+  specifically in this section we handle proper translations
   for:
 
   PATH_INFO
@@ -1532,7 +1525,7 @@ PHP_INI_END()
  */
 static void php_cgi_globals_ctor(php_cgi_globals_struct *php_cgi_globals)
 {
-#ifdef ZTS
+#if defined(ZTS) && defined(PHP_WIN32)
 	ZEND_TSRMLS_CACHE_UPDATE();
 #endif
 	php_cgi_globals->rfc2616_headers = 0;
@@ -1581,7 +1574,7 @@ static PHP_MINFO_FUNCTION(cgi)
 PHP_FUNCTION(apache_child_terminate) /* {{{ */
 {
 	if (zend_parse_parameters_none()) {
-		return;
+		RETURN_THROWS();
 	}
 	if (fcgi_is_fastcgi()) {
 		fcgi_terminate();
@@ -1593,7 +1586,7 @@ PHP_FUNCTION(apache_child_terminate) /* {{{ */
 PHP_FUNCTION(apache_request_headers) /* {{{ */
 {
 	if (zend_parse_parameters_none()) {
-		return;
+		RETURN_THROWS();
 	}
 	array_init(return_value);
 	if (fcgi_is_fastcgi()) {
@@ -1706,7 +1699,7 @@ static void add_response_header(sapi_header_struct *h, zval *return_value) /* {{
 PHP_FUNCTION(apache_response_headers) /* {{{ */
 {
 	if (zend_parse_parameters_none() == FAILURE) {
-		return;
+		RETURN_THROWS();
 	}
 
 	array_init(return_value);
@@ -1734,7 +1727,7 @@ static zend_module_entry cgi_module_entry = {
 	NULL,
 	NULL,
 	PHP_MINFO(cgi),
-	NO_VERSION_YET,
+	PHP_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 
@@ -1779,7 +1772,6 @@ int main(int argc, char *argv[])
 	char *decoded_query_string;
 	int skip_getopt = 0;
 
-#ifdef HAVE_SIGNAL_H
 #if defined(SIGPIPE) && defined(SIG_IGN)
 	signal(SIGPIPE, SIG_IGN); /* ignore SIGPIPE in standalone mode so
 								that sockets created via fsockopen()
@@ -1788,12 +1780,12 @@ int main(int argc, char *argv[])
 								does that for us!  thies@thieso.net
 								20000419 */
 #endif
-#endif
 
 #ifdef ZTS
-	tsrm_startup(1, 1, 0, NULL);
-	(void)ts_resource(0);
+	php_tsrm_startup();
+# ifdef PHP_WIN32
 	ZEND_TSRMLS_CACHE_UPDATE();
+# endif
 #endif
 
 	zend_signal_startup();
@@ -1922,6 +1914,7 @@ int main(int argc, char *argv[])
 #ifdef ZTS
 		tsrm_shutdown();
 #endif
+		free(bindpath);
 		return FAILURE;
 	}
 
@@ -1961,6 +1954,7 @@ consult the installation file that came with this distribution, or visit \n\
 			 */
 			tsrm_shutdown();
 #endif
+			free(bindpath);
 			return FAILURE;
 		}
 	}
@@ -2285,6 +2279,7 @@ parent_loop_end:
 					break;
 				case 'h':
 				case '?':
+				case PHP_GETOPT_INVALID_ARG:
 					if (request) {
 						fcgi_destroy_request(request);
 					}
@@ -2294,6 +2289,9 @@ parent_loop_end:
 					php_cgi_usage(argv[0]);
 					php_output_end_all();
 					exit_status = 0;
+					if (c == PHP_GETOPT_INVALID_ARG) {
+						exit_status = 1;
+					}
 					goto out;
 			}
 		}
@@ -2344,6 +2342,7 @@ parent_loop_end:
 							if (php_request_startup() == FAILURE) {
 								SG(server_context) = NULL;
 								php_module_shutdown();
+								free(bindpath);
 								return FAILURE;
 							}
 							if (no_headers) {
@@ -2388,14 +2387,15 @@ parent_loop_end:
 							if (php_request_startup() == FAILURE) {
 								SG(server_context) = NULL;
 								php_module_shutdown();
+								free(bindpath);
 								return FAILURE;
 							}
 							SG(headers_sent) = 1;
 							SG(request_info).no_headers = 1;
 #if ZEND_DEBUG
-							php_printf("PHP %s (%s) (built: %s %s) (DEBUG)\nCopyright (c) 1997-2018 The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__, __TIME__, get_zend_version());
+							php_printf("PHP %s (%s) (built: %s %s) (DEBUG)\nCopyright (c) The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__, __TIME__, get_zend_version());
 #else
-							php_printf("PHP %s (%s) (built: %s %s)\nCopyright (c) 1997-2018 The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__, __TIME__, get_zend_version());
+							php_printf("PHP %s (%s) (built: %s %s)\nCopyright (c) The PHP Group\n%s", PHP_VERSION, sapi_module.name, __DATE__, __TIME__, get_zend_version());
 #endif
 							php_request_shutdown((void *) 0);
 							fcgi_shutdown();
@@ -2478,17 +2478,10 @@ parent_loop_end:
 				we need in the environment.
 			*/
 			if (SG(request_info).path_translated || cgi || fastcgi) {
-				file_handle.type = ZEND_HANDLE_FILENAME;
-				file_handle.filename = SG(request_info).path_translated;
-				file_handle.handle.fp = NULL;
+				zend_stream_init_filename(&file_handle, SG(request_info).path_translated);
 			} else {
-				file_handle.filename = "Standard input code";
-				file_handle.type = ZEND_HANDLE_FP;
-				file_handle.handle.fp = stdin;
+				zend_stream_init_fp(&file_handle, stdin, "Standard input code");
 			}
-
-			file_handle.opened_path = NULL;
-			file_handle.free_filename = 0;
 
 			/* request startup only after we've done all we can to
 			 * get path_translated */
@@ -2546,83 +2539,13 @@ parent_loop_end:
 #ifdef ZTS
 					tsrm_shutdown();
 #endif
+					free(bindpath);
 					return FAILURE;
 				}
 			}
 
 			if (CGIG(check_shebang_line)) {
-				/* #!php support */
-				switch (file_handle.type) {
-					case ZEND_HANDLE_FD:
-						if (file_handle.handle.fd < 0) {
-							break;
-						}
-						file_handle.type = ZEND_HANDLE_FP;
-						file_handle.handle.fp = fdopen(file_handle.handle.fd, "rb");
-						/* break missing intentionally */
-					case ZEND_HANDLE_FP:
-						if (!file_handle.handle.fp ||
-						    (file_handle.handle.fp == stdin)) {
-							break;
-						}
-						c = fgetc(file_handle.handle.fp);
-						if (c == '#') {
-							while (c != '\n' && c != '\r' && c != EOF) {
-								c = fgetc(file_handle.handle.fp);	/* skip to end of line */
-							}
-							/* handle situations where line is terminated by \r\n */
-							if (c == '\r') {
-								if (fgetc(file_handle.handle.fp) != '\n') {
-									zend_long pos = zend_ftell(file_handle.handle.fp);
-									zend_fseek(file_handle.handle.fp, pos - 1, SEEK_SET);
-								}
-							}
-							CG(start_lineno) = 2;
-						} else {
-							rewind(file_handle.handle.fp);
-						}
-						break;
-					case ZEND_HANDLE_STREAM:
-						c = php_stream_getc((php_stream*)file_handle.handle.stream.handle);
-						if (c == '#') {
-							while (c != '\n' && c != '\r' && c != EOF) {
-								c = php_stream_getc((php_stream*)file_handle.handle.stream.handle);	/* skip to end of line */
-							}
-							/* handle situations where line is terminated by \r\n */
-							if (c == '\r') {
-								if (php_stream_getc((php_stream*)file_handle.handle.stream.handle) != '\n') {
-									zend_off_t pos = php_stream_tell((php_stream*)file_handle.handle.stream.handle);
-									php_stream_seek((php_stream*)file_handle.handle.stream.handle, pos - 1, SEEK_SET);
-								}
-							}
-							CG(start_lineno) = 2;
-						} else {
-							php_stream_rewind((php_stream*)file_handle.handle.stream.handle);
-						}
-						break;
-					case ZEND_HANDLE_MAPPED:
-						if (file_handle.handle.stream.mmap.buf[0] == '#') {
-						    size_t i = 1;
-
-						    c = file_handle.handle.stream.mmap.buf[i++];
-							while (c != '\n' && c != '\r' && i < file_handle.handle.stream.mmap.len) {
-								c = file_handle.handle.stream.mmap.buf[i++];
-							}
-							if (c == '\r') {
-								if (i < file_handle.handle.stream.mmap.len && file_handle.handle.stream.mmap.buf[i] == '\n') {
-									i++;
-								}
-							}
-							if(i > file_handle.handle.stream.mmap.len) {
-								i = file_handle.handle.stream.mmap.len;
-							}
-							file_handle.handle.stream.mmap.buf += i;
-							file_handle.handle.stream.mmap.len -= i;
-						}
-						break;
-					default:
-						break;
-				}
+				CG(skip_shebang) = 1;
 			}
 
 			switch (behavior) {
@@ -2715,9 +2638,7 @@ fastcgi_request_done:
 			requests++;
 			if (max_requests && (requests == max_requests)) {
 				fcgi_finish_request(request, 1);
-				if (bindpath) {
-					free(bindpath);
-				}
+				free(bindpath);
 				if (max_requests != 1) {
 					/* no need to return exit_status of the last request */
 					exit_status = 0;
@@ -2781,12 +2702,3 @@ parent_out:
 	return exit_status;
 }
 /* }}} */
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

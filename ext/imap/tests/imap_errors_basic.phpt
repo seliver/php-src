@@ -2,7 +2,7 @@
 Test imap_errors() function : basic functionality
 --SKIPIF--
 <?php
-require_once(dirname(__FILE__).'/skipif.inc');
+require_once(__DIR__.'/skipif.inc');
 ?>
 --FILE--
 <?php
@@ -12,7 +12,7 @@ require_once(dirname(__FILE__).'/skipif.inc');
  */
 
 echo "*** Testing imap_errors() : basic functionality ***\n";
-require_once(dirname(__FILE__).'/imap_include.inc');
+require_once(__DIR__.'/imap_include.inc');
 $password = "bogus"; // invalid password to use in this test
 
 echo "Issue open with invalid password with normal default number of retries, i.e 3\n";
@@ -27,7 +27,6 @@ $mbox = imap_open($default_mailbox, $username, $password, OP_READONLY, 1);
 echo "List any errors\n";
 var_dump(imap_errors());
 ?>
-===Done===
 --EXPECTF--
 *** Testing imap_errors() : basic functionality ***
 Issue open with invalid password with normal default number of retries, i.e 3
@@ -52,4 +51,3 @@ array(%d) {
   [0]=>
   string(%d) "%a
 }
-===Done===

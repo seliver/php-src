@@ -19,13 +19,13 @@ echo "*** Testing file_put_contents() : usage variation ***\n";
 
 $mainDir = "filePutContentsVar7.dir";
 $subDir = "filePutContentsVar7Sub";
-$absMainDir = dirname(__FILE__)."/".$mainDir;
+$absMainDir = __DIR__."/".$mainDir;
 mkdir($absMainDir);
 $absSubDir = $absMainDir."\\".$subDir;
 mkdir($absSubDir);
 
 $old_dir_path = getcwd();
-chdir(dirname(__FILE__));
+chdir(__DIR__);
 $unixifiedDir = '/'.substr(str_replace('\\','/',$absSubDir),3);
 
 
@@ -99,12 +99,12 @@ Data written correctly
 
 -- Iteration 5 --
 
-Warning: file_put_contents(%sfilePutContentsVar7.dir\filePutContentsVar7Sub\..\\\filePutContentsVar7Sub\\..\\..\filePutContentsVar7Sub\FileGetContentsVar7.tmp): failed to open stream: %s in %s on line %d
+Warning: file_put_contents(%sfilePutContentsVar7.dir\filePutContentsVar7Sub\..\\\filePutContentsVar7Sub\\..\\..\filePutContentsVar7Sub\FileGetContentsVar7.tmp): Failed to open stream: %s in %s on line %d
 No data written
 
 -- Iteration 6 --
 
-Warning: file_put_contents(%sfilePutContentsVar7.dir\filePutContentsVar7Sub\BADDIR\FileGetContentsVar7.tmp): failed to open stream: %s in %s on line %d
+Warning: file_put_contents(%sfilePutContentsVar7.dir\filePutContentsVar7Sub\BADDIR\FileGetContentsVar7.tmp): Failed to open stream: %s in %s on line %d
 No data written
 
 -- Iteration 7 --
@@ -121,7 +121,7 @@ Data written correctly
 
 -- Iteration 11 --
 
-Warning: file_put_contents(BADDIR\FileGetContentsVar7.tmp): failed to open stream: %s in %s on line %d
+Warning: file_put_contents(BADDIR\FileGetContentsVar7.tmp): Failed to open stream: %s in %s on line %d
 No data written
 
 -- Iteration 12 --

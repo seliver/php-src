@@ -23,7 +23,7 @@ $arg2 = array(-1111,-1234567);
 $arg3 = array(-1111,-1234567,-2345432);
 
 /* creating dumping file */
-$data_file = dirname(__FILE__) . '/vfprintf_basic7_64bit.txt';
+$data_file = __DIR__ . '/vfprintf_basic7_64bit.txt';
 if (!($fp = fopen($data_file, 'wt')))
    return;
 
@@ -42,10 +42,8 @@ print_r(file_get_contents($data_file));
 unlink($data_file);
 
 ?>
-===DONE===
 --EXPECT--
 *** Testing vfprintf() : basic functionality - using unsigned format ***
 18446744073709550505
 18446744073709550505 18446744073708317049
 18446744073709550505 18446744073708317049 18446744073707206184
-===DONE===

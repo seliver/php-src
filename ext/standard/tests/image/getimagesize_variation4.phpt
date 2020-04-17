@@ -15,10 +15,9 @@ Test getimagesize() function : variation - For shockwave-flash format
 
 echo "*** Testing getimagesize() : variation ***\n";
 
-var_dump( getimagesize(dirname(__FILE__)."/test13pix.swf", $info) );
+var_dump( getimagesize(__DIR__."/test13pix.swf", $info) );
 var_dump( $info );
 ?>
-===DONE===
 --EXPECT--
 *** Testing getimagesize() : variation ***
 array(5) {
@@ -35,4 +34,3 @@ array(5) {
 }
 array(0) {
 }
-===DONE===

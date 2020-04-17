@@ -10,5 +10,5 @@ try {
     echo $e->getMessage().PHP_EOL;
 }
 ?>
---EXPECTF--
-Length must be greater than 0
+--EXPECT--
+openssl_random_pseudo_bytes(): Argument #1 ($length) must be greater than 0
